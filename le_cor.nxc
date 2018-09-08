@@ -1,0 +1,105 @@
+#define TRUE 1
+#define FALSE 0
+#define esquerda 1
+#define frente 2
+#define direita 3
+#define PRETO    1
+#define AZUL     2
+#define VERDE    3
+#define AMARELO  4
+#define VERMELHO 5
+#define BRANCO   6
+#define FORA     7
+#define HT_1 IN_1 //muda de acordo com a entrada no cérebro
+
+
+ /*
+ 
+ preto: n 
+
+ branco: media maior que 250
+ (muito de todos)
+ azul: 3 media 80
+ pouco vermelho, medio verde, meio mt azul, mt branco
+ verde: num 4 media 115
+ baixo azul e baixo vermelho, medio verde e muito branco
+ vermelho: 10, 8, 7 media 110
+ tem pouco verde e pouco azul (muito vermelho e muito branco)
+ amarelo: 5 media mais ou menos 208
+  muito vermelho e branco , tbm verde, pouco azul
+  */
+
+byte color_1, verm_1, verd_1, azul_1, branco_1, num_1;
+
+float pot(float a, int b) {
+	int i;
+	float r=1;
+
+	for(i=0; i<b; i++) {
+		r *= a;
+	}
+
+	return r;
+}
+
+int le_cor () {
+
+	float sum, m, var; //m é a média aritmética, var é a variância e sum é a soma
+	float verm, verd, azul;
+	ReadSensorHTColor2Active(HT_1, num_1, verm_1, verd_1, azul_1, branco_1);
+	sum = verm_1 + azul_1 + verd_1;
+	m = sum/3;
+	verm = verm_1;
+	verd = verd_1;
+	azul = azul_1;
+	var = ( pot(verm - m , 2) + pot(verd - m , 2) + pot(azul - m , 2) )/3;
+
+	if( var >= pot(255-m , 2)) {
+		if (var<9) return BRANCO;
+	}
+
+	if(verm > azul && verd > azul && azul < m && pot(verm - m , 2) < var && verm > m && verd > m && pot (verd - m , 2) < var && var > 9) return AMARELO;
+	if( pot(verm - m , 2) > var && verm > m && var > 9 ) return VERMELHO;
+	if( pot(verd - m , 2) > var && verd > m && var > 9) return VERDE;
+	if( pot ( azul - m , 2) > var && azul > m && var > 9) return AZUL;
+	if( m <= 50 && var <= 5) return PRETO;
+
+	return FORA;
+}
+
+task main () {
+	int cor;
+	SetSensorLowspeed (HT_1);
+	SetHTColor2Mode(HT_1, HT_CMD_COLOR2_ACTIVE);
+
+	 while(1) {
+	 	cor = le_cor();
+		ClearLine(LCD_LINE3);
+		switch (cor){ 
+			case PRETO: 
+				TextOut(50, LCD_LINE3, "PRETO");
+				break;
+			case BRANCO:
+				TextOut(50, LCD_LINE3, "BRANCO");
+				break;
+			case AZUL:
+				TextOut(50, LCD_LINE3, "AZUL");
+				break;
+			case VERDE:
+				TextOut(50, LCD_LINE3, "VERDE");
+				break;
+			case VERMELHO:
+				TextOut(50, LCD_LINE3, "VERMELHO");
+				break;
+			case AMARELO:
+				TextOut(50, LCD_LINE3, "AMARELO");
+				break;
+			case FORA:
+				TextOut(50, LCD_LINE3, "FORA");
+				break;
+		}
+	}
+	
+
+
+}

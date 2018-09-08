@@ -1,0 +1,61 @@
+#define motor_direito OUT_A
+#define motor_esquerdo OUT_C
+#define ambos_motores OUT_AC
+#define maximo_integrador 10   // Valor máximo para o estado integrativo
+#define minimo_integrador -10  // Valor mínimo para o estado integrativo
+#define potencia_inicial 70    // Valor de potencia inicial passada para o motor
+#define kp 1  // Ganho proporcional
+#define ki 0  // Ganho integrativo
+#define kd 0   // Ganho derivativo
+#define Ultra_chao_direito IN_1
+#define Ultra_chao_esquerdo IN_4
+#define Ultra_boneco_direito IN_2
+#define Ultra_boneco_esquerdo IN_3
+
+task main (){
+
+  float rotacao_direita, rotacao_esquerda, erro_roda_direita = 0, erro_roda_esquerda = 0, erro_total_roda_direita = 0, erro_total_roda_esquerda = 0;
+  float erro_tragetoria, termo_proporcional;
+
+  SetSensorLowspeed(Ultra_chao_direito);
+  SetSensorLowspeed(Ultra_chao_esquerdo);
+
+  while(1){
+    if(SensorUS(Ultra_chao_esquerdo)>= 14){
+        Off(ambos_motores);
+        ClearLine(LCD_LINE1);
+        TextOut(0, LCD_LINE1, "lado esquerdo");
+        erro_roda_esquerda = MotorRotationCount(motor_esquerdo);
+        while(SensorUS(Ultra_chao_esquerdo)>= 14){
+          OnFwd(motor_esquerdo, potencia_inicial);
+        }
+        erro_roda_esquerda = MotorRotationCount(motor_esquerdo) - erro_roda_esquerda;
+        erro_total_roda_esquerda += erro_roda_esquerda;
+    }else if(SensorUS(Ultra_chao_direito)>= 14){
+        Off(ambos_motores);
+        ClearLine(LCD_LINE1);
+        TextOut(0, LCD_LINE1, "lado direito");
+        erro_roda_direita = MotorRotationCount(motor_direito);
+        while(SensorUS(Ultra_chao_direito)>= 14){
+        OnFwd(motor_direito, potencia_inicial);
+      }
+      erro_roda_direita = MotorRotationCount(motor_direito) - erro_roda_direita;
+      erro_total_roda_direita += erro_roda_direita;
+      }
+
+    rotacao_direita = MotorRotationCount (motor_direito) - erro_total_roda_direita;   // Pega quantas voltas o motor direito deu
+    rotacao_esquerda = MotorRotationCount (motor_esquerdo) - erro_total_roda_esquerda; // Pega quantas voltas o motor esquerdo deu
+
+    erro_tragetoria = rotacao_direita - rotacao_esquerda;   // Erro nas rotações, idealmente deveria ser zero para que o robô ande reto
+    termo_proporcional = kp * erro_tragetoria;
+
+    if(termo_proporcional != 0){
+      OnFwd(motor_esquerdo, termo_proporcional + potencia_inicial);
+      OnFwd(motor_direito, potencia_inicial);
+    }else{
+          OnFwd(motor_esquerdo,potencia_inicial);
+          OnFwd(motor_direito, potencia_inicial);
+          }
+    }
+  }
+}
