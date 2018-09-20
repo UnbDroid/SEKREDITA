@@ -1,0 +1,162 @@
+#define r_roda 4.1 //raio da roda, em cm
+#define d_rodas 16 //distãncia de uma roda a outra, em cm
+#define motor_direito OUT_A
+#define motor_esquerdo OUT_C
+#define ambos_motores OUT_AC
+#define TRUE 1
+#define FALSE 0
+#define esquerda 1
+#define frente 2
+#define direita 3
+#define PRETO    1
+#define AZUL     2
+#define VERDE    3
+#define AMARELO  4
+#define VERMELHO 5
+#define BRANCO   6
+#define FORA     7
+#define maximo_integrador 100   // Valor máximo para o estado integrativo
+#define minimo_integrador -100  // Valor mínimo para o estado integrativo
+#define potencia_inicial 20     // Valor de potencia inicial passada para o motor
+#define kp 7.5  // Ganho proporcional
+#define ki 0.017  // Ganho integrativo
+#define kd 0  // Ganho derivativo
+
+int lado_vermelho = 0;
+int lado_verde = 0;
+int lado_azul = 0;
+
+//Funções elementares do robô
+
+void sai_de_re(int graus); //Gira ambas as rodas para trás
+
+void andar_reto(); //
+
+void gira_90(int lado); //Gira 90° ou para esquerda ou para direita, de acordo com o sinal no argumento (positivo para direita e negativo para esquerda)
+
+int le_cor(); //De acordo com a leitura do sensor, identificar qual cor está lendo
+
+
+// Funções do Desafio em si
+
+void pega_boneco (); //pega o boneco
+
+void deixa_boneco();
+
+int verifica_cor(); /* Verifica se a cor já tem uma instrução definida (retorna TRUE or FALSE) */
+
+void define_cor() ; /* Caso a verifica_cor retornar FALSE, entra nessa função. Essa função fará o teste ṕara cada lado tendo em vista lados ja
+escolhidos e daŕa um lado para a cor assim que encontrar outra cor(ou boneco) */
+
+void inverte_cor(); // No retorno do plaza, as cores são invertidas
+
+void plaza();
+
+
+void gira_90(lado){
+	if(lado == direita){
+		while(MotorRotationCount(OUT_A)<149){
+			OnFwd(OUT_A, 50);
+			OnRev(OUT_C, 50);
+		}
+	} else{
+		while(MotorRotationCount(OUT_A) > -149){
+			OnRev(OUT_A, 50);
+			OnFwd(OUT_C, 50);
+		}
+	}
+}
+
+void andar_reto(){
+	float rotacao_esquerda, rotacao_direita, correcao, erro_tragetoria, historico_erro, ultimo_erro = 0;
+    float termo_proporcional = 0, termo_integrativo = 0, termo_derivativo = 0;
+
+    OnFwd(ambos_motores, potencia_inicial);
+
+    while(1){
+        rotacao_direita = MotorRotationCount (motor_direito);   // Pega quantas voltas o motor direito deu
+        rotacao_esquerda = MotorRotationCount (motor_esquerdo); // Pega quantas voltas o motor esquerdo deu
+
+        erro_tragetoria = rotacao_direita - rotacao_esquerda;   // Erro nas rotações, idealmente deveria ser zero para que o robô ande reto
+        termo_proporcional = kp * erro_tragetoria;
+
+        historico_erro += erro_tragetoria;                      // Mantém o histórico de erros para fazer a parte integrativa do PID
+        if(historico_erro > maximo_integrador){                 // Limita o histórico de erros dentro de um limite inferior e superior
+  	      historico_erro = maximo_integrador;
+          }else 
+          	if(historico_erro < minimo_integrador){
+            	historico_erro = minimo_integrador;
+          	}
+        termo_integrativo = ki * historico_erro;
+
+        termo_derivativo = kp * (ultimo_erro - erro_tragetoria);
+        ultimo_erro = erro_tragetoria;                            // Atualiza o erro passado
+
+        correcao = termo_derivativo + termo_integrativo + termo_proporcional;  // Aqui vc deu todos os termos a correcao
+
+        ClearLine(LCD_LINE1);
+        TextOut(0, LCD_LINE1, "Propl: ");
+        NumOut(48, LCD_LINE1, termo_proporcional);
+        ClearLine(LCD_LINE5);
+        TextOut(0, LCD_LINE5, "Integ: ");
+        NumOut(48, LCD_LINE5, termo_integrativo);
+        OnFwd(motor_esquerdo, potencia_inicial+correcao);
+        OnFwd(motor_direito, potencia_inicial-correcao);
+    }
+}
+
+/*void plaza(){
+	while(le_cor() != PRETO){
+		andar_reto();
+	}
+
+	deixa_boneco();
+	inverte_cor();
+
+	gira_90(direita);
+	while(SensorUS(USFRENTE) >= 12){
+		andar_reto();
+	}
+
+	gira_90(direita);
+	while(SensorUS(USFRENTE) >= 12){
+		andar_reto();
+	}
+
+	gira_90(direita);
+	while(SensorUS(USESQUERDA) <= 15){
+		andar_reto();
+	}
+
+	gira_90(esquerda);
+		
+	while(MotorRotationCount(motor_esquerdo) < 100){
+		andar_reto();
+	}
+}*/
+
+void inverte_cor(){
+	if(lado_vermelho == esquerda){
+		lado_vermelho = direita;
+	}else{	
+		if(lado_verde == esquerda){
+			lado_verde = direita;
+		}else{
+			if(lado_azul == esquerda){
+				lado_azul = direita;
+			}
+		}
+	}
+
+	if(lado_vermelho == direita){
+		lado_vermelho = esquerda;
+	}else{	
+		if(lado_verde == direita){
+			lado_verde = esquerda;
+		}else{
+			if(lado_azul == direita){
+				lado_azul = esquerda;
+			}
+		}
+	}
+}

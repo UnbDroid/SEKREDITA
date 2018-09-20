@@ -1,0 +1,64 @@
+#define r_roda 4.1 //raio da roda, em cm
+#define d_rodas 16 //distãncia de uma roda a outra, em cm
+#define motor_direito OUT_A
+#define motor_esquerdo OUT_C
+#define ambos_motores OUT_AC
+#define Ultra_chao_direito IN_1
+#define Ultra_chao_esquerdo IN_4
+//#define Giroscopio IN_2
+//#define HT_direita IN_1
+//#define HT_esquerda IN_4
+//#define Ultra_boneco_direito IN_2
+//#define Ultra_boneco_esquerdo IN_3
+#define para_frente 1
+#define para_tras -1
+#define esquerda 3
+#define frente 2
+#define direita 1
+#define PRETO    1
+#define AZUL     2
+#define VERDE    3
+#define AMARELO  4
+#define VERMELHO 5
+#define BRANCO   6
+#define FORA     7
+#define maximo_integrador 100   // Valor máximo para o estado integrativo
+#define minimo_integrador -100  // Valor mínimo para o estado integrativo
+#define potencia_inicial -55     // Valor de potencia inicial passada para o motor é negativa por causa da disposição do motor no robô
+#define kp 0.1   // Ganho proporcional
+#define ki 0  // Ganho integrativo
+#define kd 0  // Ganho derivativo
+#define tamanho_da_rampa 100
+#define distancia_do_boneco 20
+#define distancia_chao 15
+
+byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
+
+void procura_buraco(int direcao){ // Verifica a existencia de bonecos nas laterais e corrige o problema
+	if(SensorUS(Ultra_chao_esquerdo) >= distancia_chao){
+    OnFwd(OUT_B,potencia_inicial);
+			Off(ambos_motores);
+			while(SensorUS(Ultra_chao_esquerdo)>= 14){
+				OnFwd(motor_esquerdo, direcao*potencia_inicial);
+			}
+	}else if(SensorUS(Ultra_chao_direito) >= distancia_chao){
+			Off(ambos_motores);
+			while(SensorUS(Ultra_chao_direito)>= 14){
+			     OnFwd(motor_direito, direcao*potencia_inicial);
+		  }
+		}
+  Off(OUT_B);
+}
+
+
+task main(){
+
+  SetSensorLowspeed(Ultra_chao_direito);
+	SetSensorLowspeed(Ultra_chao_esquerdo);
+
+    while(1){
+      OnFwd(ambos_motores,-1*potencia_inicial);
+      procura_buraco(-1);
+    }
+
+}
