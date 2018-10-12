@@ -15,6 +15,11 @@
 #define esquerda 3
 #define frente 2
 #define direita 1
+#define PORTA_E OUT_A
+#define PORTA_D OUT_C
+#define RAMPA OUT_B
+#define PORTAS OUT_AC
+#define Ultra_Frente IN_3
 #define PRETO    1
 #define AZUL     2
 #define VERDE    3
@@ -34,31 +39,17 @@
 
 byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
 
-void procura_buraco(int direcao){ // Verifica a existencia de bonecos nas laterais e corrige o problema
-	if(SensorUS(Ultra_chao_esquerdo) >= distancia_chao){
-    OnFwd(OUT_B,potencia_inicial);
-			Off(ambos_motores);
-			while(SensorUS(Ultra_chao_esquerdo)>= 14){
-				OnFwd(motor_esquerdo, direcao*potencia_inicial);
-			}
-	}else if(SensorUS(Ultra_chao_direito) >= distancia_chao){
-			Off(ambos_motores);
-			while(SensorUS(Ultra_chao_direito)>= 14){
-			     OnFwd(motor_direito, direcao*potencia_inicial);
-		  }
-		}
-  Off(OUT_B);
-}
-
 
 task main(){
 
-  SetSensorLowspeed(Ultra_chao_direito);
-	SetSensorLowspeed(Ultra_chao_esquerdo);
+	SetSensorLowspeed(IN_3);
 
-    while(1){
-      OnFwd(ambos_motores,-1*potencia_inicial);
-      procura_buraco(-1);
-    }
-
+	while(MotorRotationCount(PORTA_D) >= -160){
+		OnFwd(PORTAS, -60);
+	}
+	Off(PORTAS);
+	while(MotorRotationCount(RAMPA)<= 40){
+		OnFwd(RAMPA, 40);
+	}
+	while(1);
 }
