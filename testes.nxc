@@ -15,8 +15,8 @@
 #define esquerda 3
 #define frente 2
 #define direita 1
-#define PORTA_E OUT_A
-#define PORTA_D OUT_C
+#define PORTA_D OUT_A
+#define PORTA_E OUT_C
 #define RAMPA OUT_B
 #define PORTAS OUT_AC
 #define Ultra_Frente IN_3
@@ -44,9 +44,13 @@ task main(){
 
 	SetSensorLowspeed(IN_3);
 
-	while(MotorRotationCount(PORTA_D) >= -160){
-		OnFwd(PORTAS, -60);
+	while(SensorUS(IN_3) <  )
+
+	while(MotorRotationCount(PORTA_D) >= -130){
+		OnFwd(PORTA_D, -60);
+		OnFwd(PORTA_E, -55);
 	}
+
 	Off(PORTAS);
 	while(MotorRotationCount(RAMPA)<= 40){
 		OnFwd(RAMPA, 40);
