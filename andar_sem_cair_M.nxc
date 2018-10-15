@@ -1,0 +1,162 @@
+/*
+  Esse código vai ser feito para testar a comunicação entre os cérebros de modo a só andar reto sem cair da pista e ler as cores do chão
+*/
+#define BT_CONN 1
+#define OUTBOX 5
+#define motor_direito OUT_A
+#define motor_esquerdo OUT_C
+#define ambos_motores OUT_AC
+/* #define HT_direita IN_2
+#define HT_esquerda IN_3 */
+#define Ultra_chao_direito IN_1
+#define Ultra_chao_esquerdo IN_4
+#define PRETO    1
+#define AZUL     2
+#define VERDE    3
+#define AMARELO  4
+#define VERMELHO 5
+#define BRANCO   6
+#define FORA     7
+#define direita 1
+#define esquerda 3
+#define kp 3  // Ganho proporcional
+#define ki 0  // Ganho integrativo
+#define kd 0  // Ganho derivativo
+#define potencia_inicial -70     // Valor de potencia inicial passada para o motor
+#define distancia_chao 14
+
+byte color_1, verm_1, verd_1, azul_1, branco_1, num_1;
+byte color_2, verm_2, verd_2, azul_2, branco_2, num_2;
+
+float pot(float a, int b) {
+	int i;
+	float r=1;
+
+	for(i=0; i<b; i++) {
+		r *= a;
+	}
+
+	return r;
+}
+
+/* int le_cor (int lado) { //De acordo com a leitura do sensor, identificar qual cor está lendo
+
+	float sum, m, var; //m é a média aritmética, var é a variância e sum é a soma
+	float verm, verd, azul;
+	sum = verm_1 + azul_1 + verd_1;
+	m = sum/3;
+
+  if (lado == direita) {
+	    ReadSensorHTColor2Active(HT_direita, num_1, verm_1, verd_1, azul_1, branco_1);
+	 	  verm = verm_1;
+		  verd = verd_1;
+		  azul = azul_1;
+  } else if (lado == esquerda) {
+	   ReadSensorHTColor2Active(HT_esquerda, num_2, verm_2, verd_2, azul_2, branco_2);
+	    verm = verm_2;
+	    verd = verd_2;
+	    azul = azul_2;
+
+  }
+
+  var = ( pot(verm - m , 2) + pot(verd - m , 2) + pot(azul - m , 2) )/3;
+
+	if( var >= pot(255-m , 2)) {
+		if (var<9) return BRANCO;
+	}
+
+	if(verm > azul && verd > azul && azul < m && pot(verm - m , 2) < var && verm > m && verd > m && pot (verd - m , 2) < var && var > 9) return AMARELO;
+	if( pot(verm - m , 2) > var && verm > m && var > 9 ) return VERMELHO;
+	if( pot(verd - m , 2) > var && verd > m && var > 9) return VERDE;
+	if( pot ( azul - m , 2) > var && azul > m && var > 9) return AZUL;
+	if( m <= 50 && var <= 5) return PRETO;
+
+	return FORA;
+
+} */
+
+void andar_reto(){
+
+  float rotacao_direita, rotacao_esquerda, erro_tragetoria, termo_proporcional, termo_integrativo, termo_derivativo, correcao;
+  float historico_erro, ultimo_erro;
+
+  OnFwd(ambos_motores, potencia_inicial);
+
+  rotacao_direita = MotorRotationCount (motor_direito);   // Pega quantas voltas o motor direito deu
+  rotacao_esquerda = MotorRotationCount (motor_esquerdo); // Pega quantas voltas o motor esquerdo deu
+
+  erro_tragetoria = rotacao_direita - rotacao_esquerda;   // Erro nas rotações, idealmente deveria ser zero para que o robô ande reto
+  termo_proporcional = kp * erro_tragetoria;              // Calcula o termo proporcional
+  historico_erro += erro_tragetoria;                      // Mantém o histórico de erros para fazer a parte integrativa do PID
+
+  termo_derivativo = kd * (ultimo_erro - erro_tragetoria);
+  ultimo_erro = erro_tragetoria;                          // Atualiza o erro passado
+
+  correcao = termo_derivativo + termo_integrativo + termo_proporcional;  // Aqui vc deu todos os termos a correcao
+
+	correcao = correcao/2;
+
+  if(correcao != 0){
+		while()
+    OnFwd(motor_esquerdo, correcao + potencia_inicial);
+    OnFwd(motor_direito, -correcao + potencia_inicial);
+  }else{
+    OnFwd(ambos_motores,potencia_inicial);
+  }
+
+	ClearScreen();
+	NumOut(0, LCD_LINE1, rotacao_direita);
+	NumOut(0, LCD_LINE2, rotacao_esquerda);
+	NumOut(0, LCD_LINE3, correcao);
+	NumOut(0, LCD_LINE4, power + potencia_inicial);
+	NumOut(0, LCD_LINE5, -correcao + potencia_inicial);
+
+}
+
+void checa_pista(){
+
+  float erro_roda_direita = 0, erro_roda_esquerda = 0;
+
+  	if(SensorUS(Ultra_chao_esquerdo) >= distancia_chao){
+  			Off(ambos_motores);
+  			while(SensorUS(Ultra_chao_esquerdo)>= 14){
+  				OnFwd(motor_esquerdo, potencia_inicial);
+  			}
+        ResetRotationCount(ambos_motores);
+        Wait(150);
+  	}else if(SensorUS(Ultra_chao_direito) >= distancia_chao){
+  			Off(ambos_motores);
+  			while(SensorUS(Ultra_chao_direito)>= 14){
+  			OnFwd(motor_direito, potencia_inicial);
+  		}
+        ResetRotationCount(ambos_motores);
+        Wait(150);
+  	}
+}
+/*
+sub BTCheck(int conn){
+  if (!BluetoothStatus(conn)==NO_ERR){
+    TextOut(5,LCD_LINE2,"Error");
+    Wait(1000);
+    Stop(true);
+  }
+} */
+
+task main() {
+
+  string in, out, iStr;
+  //BTCheck(BT_CONN); //check slave connection
+
+  SetSensorLowspeed(Ultra_chao_direito);
+  SetSensorLowspeed(Ultra_chao_esquerdo);
+
+  while(1){
+
+    andar_reto();
+    //checa_pista();
+
+    //SendRemoteString(BT_CONN,OUTBOX,"Le_Cor");
+
+
+    }
+}
