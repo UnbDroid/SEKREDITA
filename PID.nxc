@@ -1,60 +1,56 @@
-#define motor_direito OUT_A
-#define motor_esquerdo OUT_C
-#define ambos_motores OUT_AC
-#define maximo_integrador 10   // Valor máximo para o estado integrativo
-#define minimo_integrador -10  // Valor mínimo para o estado integrativo
-#define potencia_inicial 70     // Valor de potencia inicial passada para o motor
-#define kp 1  // Ganho proporcional
-#define ki 0  // Ganho integrativo
-#define kd 0   // Ganho derivativo
-#define Ultra_chao_direito IN_1
-#define Ultra_chao_esquerdo IN_4
-#define Ultra_boneco_direito IN_2
-#define Ultra_boneco_esquerdo IN_3
+/*
+    Entradas:     A função não tem argumentos.
+    Saídas:       A função não tem retornos.
+    Comentários:  Essa função implementa o controle de posição angular no plano XZ(paralelo ao chão) de um robô móvel
+                  Ela utiliza o erro entre a medição dos encoders de cada motor para ajustar a potência mandanda para
+                  cada motor de modo a tentar manter o robô em uma trajetória linear.
+*/
 
-task main (){
+#define motor_e OUT_C        // e -> esquerdo
+#define motor_d OUT_A        // d -> direito
+#define motor_ambos OUT_AC
+#define potencia_inicial 50 // Potência na qual o controle vai tentar se manter em torno
+#define kp 3                // Constante proporcional
+#define kd 1                // Constante derivativa
+#define ki 3                // Constante integral
 
-      float rotacao_esquerda, rotacao_direita, correcao, erro_tragetoria, historico_erro = 0, ultimo_erro = 0;
-      float termo_proporcional = 0, termo_integrativo = 0, termo_derivativo = 0;
+task main() {
 
-      SetSensorLowspeed(Ultra_boneco_direito);
-      SetSensorLowspeed(Ultra_boneco_esquerdo);
-      OnFwd(ambos_motores, potencia_inicial);
+  float rotacao_e, rotacao_d, erro, correcao, integrativo, derivativo, historico = 0, ultimo_erro = 0;
+  float potencia_e, potencia_d;
 
-      while(1){
-        if((SensorUS(Ultra_boneco_direito) <=10) || (SensorUS(Ultra_boneco_esquerdo) <=10)){
-              Off(ambos_motores);
-              Wait(1000);
+  while(1){
 
-              while((SensorUS(Ultra_boneco_direito) <=10) || (SensorUS(Ultra_boneco_esquerdo) <=10)){
+    // Pega a cada iteração a atual rotação de cada motor
+    rotacao_e = MotorRotationCount(motor_e);
+    rotacao_d = MotorRotationCount(motor_d);
 
-              }
-              }
-          rotacao_direita = MotorRotationCount (motor_direito);   // Pega quantas voltas o motor direito deu
-          rotacao_esquerda = MotorRotationCount (motor_esquerdo); // Pega quantas voltas o motor esquerdo deu
+    // Nos diz o erro entre as rotações das rodas
+    erro = rotacao_d - rotacao_e;
 
-          erro_tragetoria = rotacao_direita - rotacao_esquerda;   // Erro nas rotações, idealmente deveria ser zero para que o robô ande reto
-          termo_proporcional = kp * erro_tragetoria;
+    // Somatório dos erros durante a execução do código, da menos importancia para o histório e mais para o erro atual
+    historico = 0.666 * historico + erro;
 
-          historico_erro += erro_tragetoria;
-          // Mantém o histórico de erros para fazer a parte integrativa do PID
-          if(historico_erro > maximo_integrador){                 // Limita o histórico de erros dentro de um limite inferior e superior
-              historico_erro = maximo_integrador;
-          }else if(historico_erro < minimo_integrador){
-              historico_erro = minimo_integrador;
-          }
-          termo_integrativo = ki * historico_erro;
+    // Anti Wind-Up, serve para que o erro integral não exploda
+    if(integrativo > 300){
+      integrativo = 300;
+    }else if(integrativo < -300){
+      integrativo = -300;
+    }
 
-          termo_derivativo = kd * (ultimo_erro - erro_tragetoria);
-          ultimo_erro = erro_tragetoria;                            // Atualiza o erro passado
+    // Calcula o erro instantâneo
+    derivativo = (erro - ultimo_erro);
+    ultimo_erro = erro;
 
-          correcao = termo_derivativo + termo_integrativo + termo_proporcional;  // Aqui vc deu todos os termos a correcao
-          if(correcao != 0){
-            OnFwd(motor_esquerdo, correcao + potencia_inicial);
-            OnFwd(motor_direito, potencia_inicial);
-          }else{
-                OnFwd(motor_esquerdo,potencia_inicial);
-                OnFwd(motor_direito, potencia_inicial);
-                }
-          }
+    // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
+    correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
+
+    // Calcula a potencia de correção em torno da potencia inicial desejada
+    potencia_e = potencia_inicial - correcao;
+    potencia_d = potencia_inicial + correcao;
+
+    // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
+    OnRev(motor_e, potencia_e);
+    OnRev(motor_d, potencia_d);
+  }
 }
