@@ -1,0 +1,49 @@
+#define motor_e OUT_C        // Motor esquerdo
+#define motor_d OUT_A        // Motor direito
+#define motor_ambos OUT_AC
+#define potencia_inicial 50 // Potência de referência, usar OnRev para ir para frente
+#define US_chao_d IN_1      // SensorUS voltado para o chão direito
+#define US_chao_e IN_2      // SensorUS voltado para o chão esquerdo
+
+task main() {
+
+  SetSensorLowspeed(US_chao_d);
+  SetSensorLowspeed(US_chao_e);
+
+  float leitura_US_e, leitura_US_d;
+  float distancia_do_chao = 9;
+
+  while(1){
+    OnRev(motor_ambos, potencia_inicial);
+    leitura_US_d = SensorUS(US_chao_d);
+    leitura_US_e = SensorUS(US_chao_e);
+
+    // Checa se o robô está caindo da pista pelo seu lado direito
+    if(leitura_US_d > distancia_do_chao){
+      OnRev(motor_ambos, potencia_inicial*0.2);
+      // Enquanto está caindo
+      while(leitura_US_d > distancia_do_chao){
+        // Para voltar para a pista é preciso girar a roda direita para frente e a esquerda para trás
+        OnRev(motor_d, potencia_inicial);
+        OnRev(motor_e, -potencia_inicial);
+        // Atualiza leitura do sensor
+        leitura_US_d = SensorUS(US_chao_d);
+      }
+    // Checa se o robô está caindo da pista pelo seu lado esquerdo
+    }else if (leitura_US_e > distancia_do_chao){
+      OnRev(motor_ambos, potencia_inicial*0.2);
+      // Enquanto está caindo
+      while(leitura_US_e > distancia_do_chao){
+        // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
+        OnRev(motor_e, potencia_inicial);
+        OnRev(motor_d, -potencia_inicial);
+        // Atualiza leitura do sensor
+        leitura_US_e = SensorUS(US_chao_e);
+      }
+    }
+
+    // Reseta o contador de giros para manter funcionando o PID
+    ResetRotationCount(motor_ambos);
+    Wait(150);
+  }
+}
