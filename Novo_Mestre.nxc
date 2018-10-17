@@ -1,0 +1,125 @@
+#define motor_e OUT_C        // Motor esquerdo
+#define motor_d OUT_A        // Motor direito
+#define motor_ambos OUT_AC
+#define potencia_inicial 50 // Potência de referência, usar OnRev para ir para frente
+#define US_chao_d IN_1      // SensorUS voltado para o chão direito
+#define US_chao_e IN_2      // SensorUS voltado para o chão esquerdo
+
+void nao_cair(){
+
+  float leitura_US_e, leitura_US_d;
+  float distancia_do_chao = 10;
+
+  leitura_US_d = SensorUS(US_chao_d);
+  leitura_US_e = SensorUS(US_chao_e);
+
+  // Checa se o robô está caindo da pista pelo seu lado direito
+  if(leitura_US_d > distancia_do_chao){
+    OnRev(motor_ambos, potencia_inicial*0.5);
+    // Enquanto está caindo
+    while(leitura_US_d > distancia_do_chao){
+      // Para voltar para a pista é preciso girar a roda direita para frente e a esquerda para trás
+      OnRev(motor_d, potencia_inicial);
+      OnRev(motor_e, -potencia_inicial);
+      // Atualiza leitura do sensor
+      leitura_US_d = SensorUS(US_chao_d);
+    }
+    // Reseta o contador de giros para manter funcionando o PID
+    ClearScreen();
+    NumOut(5,LCD_LINE1,MotorRotationCount(OUT_A));
+    NumOut(5,LCD_LINE2,MotorRotationCount(OUT_C));
+    ResetRotationCount(motor_ambos);
+    Wait(200);
+    NumOut(5,LCD_LINE1,MotorRotationCount(OUT_A));
+    NumOut(5,LCD_LINE2,MotorRotationCount(OUT_C));
+  // Checa se o robô está caindo da pista pelo seu lado esquerdo
+  }else if (leitura_US_e > distancia_do_chao){
+    OnRev(motor_ambos, potencia_inicial*0.5);
+    // Enquanto está caindo
+    while(leitura_US_e > distancia_do_chao){
+      // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
+      OnRev(motor_e, potencia_inicial);
+      OnRev(motor_d, -potencia_inicial);
+      // Atualiza leitura do sensor
+      leitura_US_e = SensorUS(US_chao_e);
+    }
+    // Reseta o contador de giros para manter funcionando o PID
+    ClearScreen();
+    NumOut(5,LCD_LINE1,MotorRotationCount(OUT_A));
+    NumOut(5,LCD_LINE2,MotorRotationCount(OUT_C));
+    ResetRotationCount(motor_ambos);
+    Wait(200);
+    NumOut(5,LCD_LINE1,MotorRotationCount(OUT_A));
+    NumOut(5,LCD_LINE2,MotorRotationCount(OUT_C));
+  }
+}
+
+void PID(){
+  /*
+      Entradas:     A função não tem argumentos.
+      Saídas:       A função não tem retornos.
+      Comentários:  Essa função implementa o controle de posição angular no plano XZ(paralelo ao chão) de um robô móvel
+                    Ela utiliza o erro entre a medição dos encoders de cada motor para ajustar a potência mandanda para
+                    cada motor de modo a tentar manter o robô em uma trajetória linear.
+  */
+
+  // Constantes do controle
+  float kp = 3.0;
+  float ki = 1.0;
+  float kd = 3.0;
+
+  // Variáveis utilizadas nos calculos
+  float rotacao_e, rotacao_d, erro, correcao, integrativo, derivativo, historico = 0, ultimo_erro = 0;
+  float potencia_e, potencia_d;
+
+  // Pega a cada iteração a atual rotação de cada motor
+  rotacao_e = MotorRotationCount(motor_e);
+  rotacao_d = MotorRotationCount(motor_d);
+
+  // Nos diz o erro entre as rotações das rodas
+  erro = rotacao_d - rotacao_e;
+
+  // Somatório dos erros durante a execução do código, da menos importancia para o histório e mais para o erro atual
+  historico = 0.666 * historico + erro;
+
+  // Anti Wind-Up, serve para que o erro integral não exploda
+  if(integrativo > 300){
+    integrativo = 300;
+  }else if(integrativo < -300){
+    integrativo = -300;
+  }
+
+  // Calcula o erro instantâneo
+  derivativo = (erro - ultimo_erro);
+  ultimo_erro = erro;
+
+  // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
+  correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
+
+  // Calcula a potencia de correção em torno da potencia inicial desejada
+  potencia_e = potencia_inicial - correcao;
+  potencia_d = potencia_inicial + correcao;
+
+  // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
+  OnRev(motor_e, potencia_e);
+  OnRev(motor_d, potencia_d);
+
+}
+
+task main() {
+
+  SetSensorLowspeed(US_chao_d);
+  SetSensorLowspeed(US_chao_e);
+
+  while(true){
+
+    nao_cair();
+    /* ClearScreen();
+    TextOut(5,LCD_LINE1,"Sensor D:");
+    NumOut(5,LCD_LINE2,SensorUS(IN_1));
+    TextOut(5,LCD_LINE3,"Sensor E:");
+    NumOut(5,LCD_LINE4,SensorUS(IN_2)); */
+
+    PID();
+  }
+}
