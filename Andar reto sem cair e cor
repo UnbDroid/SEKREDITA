@@ -1,199 +1,273 @@
-#define motor_e OUT_C        // Motor esquerdo
-#define motor_d OUT_A        // Motor direito
-#define ambos_motores OUT_AC
-#define potencia_inicial 50 // Potência de referência, usar OnRev para ir para frente
-#define US_chao_d IN_1      // SensorUS voltado para o chão direito
-#define US_chao_e IN_2      // SensorUS voltado para o chão esquerdo
-#define HT_direita IN_3		// Sensor de cor da direita
-#define HT_esquerda IN_4	// Sensor de cor da esquerda
-#define kp 3
-#define kd 1
-#define ki 3
-#define distancia_do_chao 11
-#define esquerda 1
-#define frente 2
-#define direita 3
-#define PRETO    1
-#define AZUL     2
-#define VERDE    3
-#define AMARELO  4
-#define VERMELHO 5
-#define BRANCO   6
-#define FORA     7
+	#define motor_e OUT_C        // Motor esquerdo
+	#define motor_d OUT_A        // Motor direito
+	#define ambos_motores OUT_AC
+	#define potencia_inicial 50 // Potência de referência, usar OnRev para ir para frente
+	#define US_chao_d IN_1      // SensorUS voltado para o chão direito
+	#define US_chao_e IN_2      // SensorUS voltado para o chão esquerdo
+	#define HT_direita IN_3		// Sensor de cor da direita
+	#define HT_esquerda IN_4	// Sensor de cor da esquerda
+	#define kp 3
+	#define ki 3
+	#define kd 1
+	#define distancia_do_chao 10
+	#define esquerda 1
+	#define frente 2
+	#define direita 3
+	#define PRETO    1
+	#define AZUL     2
+	#define VERDE    3
+	#define AMARELO  4
+	#define VERMELHO 5
+	#define BRANCO   6
+	#define FORA     6
 
-byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
-float offset_e = 0, offset_d = 0;
+	byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
+	float offset_te = 0, offset_td = 0;
 
-float pot(float a, int b);
-int le_cor (int lado);
-void entra_reto_na_cor();
-void entra_reto(int lado);
-
-
-
-float pot(float a, int b) { // Potenciação
-	int i;
-	float r=1;
-
-	for(i=0; i<b; i++) {
-		r *= a;
-	}
-
-	return r;
-}
-
-
-int le_cor (int lado) {
-
-	float sum, m, var; //m é a média aritmética, var é a variância e sum é a soma
-	float verm, verd, azul;
-	if(lado == direita){
-
-	ReadSensorHTColor2Active(HT_direita, num_1, verm_1, verd_1, azul_1, branco_1);
-	}
-	else if (lado == esquerda) {
-		ReadSensorHTColor2Active(HT_esquerda, num_1, verm_1, verd_1, azul_1, branco_1);
-	}
-	sum = verm_1 + azul_1 + verd_1;
-	m = sum/3;
-	verm = verm_1;
-	verd = verd_1;
-	azul = azul_1;
-	var = ( pot(verm - m , 2) + pot(verd - m , 2) + pot(azul - m , 2) )/3;
-
-	if( var >= pot(255-m , 2)) {
-		if (var<9) return BRANCO;
-	}
-
-	if(verm > azul && verd > azul && azul < m && pot(verm - m , 2) < var && verm > m && verd > m && pot (verd - m , 2) < var && var > 9) return AMARELO;
-	if( pot(verm - m , 2) > var && verm > m && var > 9 ) return VERMELHO;
-	if( pot(verd - m , 2) > var && verd > m && var > 9) return VERDE;
-	if( pot ( azul - m , 2) > var && azul > m && var > 9) return AZUL;
-	if( m <= 50 && var <= 5) return PRETO;
-
-	return FORA;
-}
+	float pot(float a, int b);
+	int le_cor (int lado);
+	void entra_reto_na_cor();
+	void entra_reto(int lado);
 
 
 
-void entra_reto_na_cor(){ // Verifica as cores de cada HT e chama a função de correção
-	int htdir, htesq;
+	float pot(float a, int b) { // Potenciação
+		int i;
+		float r=1;
 
-  htdir = le_cor(direita);
-  htesq = le_cor(esquerda);
-
-  if((htdir != BRANCO || htesq != BRANCO) && htesq != htdir && (htdir != FORA || htesq != FORA)){
-  		if((htesq == BRANCO || htesq == FORA) && htdir != BRANCO){
-  				entra_reto(esquerda);
-  		}else{
-  			   entra_reto(direita);
-            }
-  }
-}
-
-void entra_reto(int lado){ // Corrige a entrada nas cores
-
-	float erro_direito, erro_esquerdo;
-
-	Off(ambos_motores);
-	erro_esquerdo = MotorRotationCount(motor_e);
-	erro_direito = MotorRotationCount(motor_d);
-
-	if(lado == esquerda){
-		while(le_cor(esquerda) != le_cor(direita)){
-			OnFwd(motor_e, 50);
-      OnFwd(motor_d, -50);
+		for(i=0; i<b; i++) {
+			r *= a;
 		}
-	}else{
-		while(le_cor(esquerda) != le_cor(direita)){
-			OnFwd(motor_d, 50);
-			OnFwd(motor_e, -50);
+
+		return r;
+	}
+
+
+	int le_cor (int lado) {
+
+		float sum, m, var; //m é a média aritmética, var é a variância e sum é a soma
+		float verm, verd, azul;
+		if(lado == direita){
+
+		ReadSensorHTColor2Active(HT_direita, num_1, verm_1, verd_1, azul_1, branco_1);
+		}
+		else if (lado == esquerda) {
+			ReadSensorHTColor2Active(HT_esquerda, num_1, verm_1, verd_1, azul_1, branco_1);
+		}
+		sum = verm_1 + azul_1 + verd_1;
+		m = sum/3;
+		verm = verm_1;
+		verd = verd_1;
+		azul = azul_1;
+		var = ( pot(verm - m , 2) + pot(verd - m , 2) + pot(azul - m , 2) )/3;
+
+		if( var >= pot(255-m , 2)) {
+			if (var<9) return BRANCO;
+		}
+
+		if(verm > azul && verd > azul && azul < m && pot(verm - m , 2) < var && verm > m && verd > m && pot (verd - m , 2) < var && var > 9) return AMARELO;
+		if( pot(verm - m , 2) > var && verm > m && var > 9 ) return VERMELHO;
+		if( pot(verd - m , 2) > var && verd > m && var > 9) return VERDE;
+		if( pot ( azul - m , 2) > var && azul > m && var > 9) return AZUL;
+		if( m <= 50 && var <= 5) return PRETO;
+
+		return BRANCO;
+	}
+
+
+	void sai_da_cor(int cor_atual){
+		int cor_e,cor_d;
+
+		cor_e = le_cor(esquerda);
+		cor_d = le_cor(direita);
+
+		while(cor_e != BRANCO && cor_d != BRANCO){
+			OnRev(ambos_motores,potencia_inicial/1.3);
+
+			cor_e = le_cor(esquerda);
+			cor_d = le_cor(direita);
+
+			if(cor_e == BRANCO && cor_d != BRANCO){
+
+				Off(ambos_motores);
+				OnFwd(motor_e,potencia_inicial/1.3);
+				while(cor_e == BRANCO){
+					cor_e = le_cor(esquerda);
+				}
+			}else if(cor_d == BRANCO && cor_e != BRANCO){
+
+				Off(ambos_motores);
+				OnFwd(motor_d,potencia_inicial/1.3);
+				while(cor_d == BRANCO){
+					cor_d = le_cor(direita);
+				}
+			}
 		}
 	}
-		erro_direito = MotorRotationCount(motor_d) - erro_direito;
-		erro_esquerdo = MotorRotationCount(motor_e) - erro_esquerdo;
-		offset_d += erro_direito;
-		offset_e += erro_esquerdo;
-}
 
-void Nao_Cai(){
+	void gira90(int lado){
 
-  	offset_d = MotorRotationCount(motor_d);
-  	offset_e = MotorRotationCount(motor_e);
-    // Enquanto está caindo
-    while(SensorUS(US_chao_d) >= distancia_do_chao){
-      // Para voltar para a pista é preciso girar a roda direita para frente e a esquerda para trás
-      OnRev(motor_d, potencia_inicial);
-      OnRev(motor_e, -potencia_inicial);
-    }
+		float offset_d, offset_e;
 
-    // Checa se o robô está caindo da pista pelo seu lado esquerdo
-    while(SensorUS(US_chao_e) >= distancia_do_chao){
-      // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
-      OnRev(motor_e, potencia_inicial);
-      OnRev(motor_d, -potencia_inicial);
-    }
+		ResetRotationCount(ambos_motores);
+		Wait(100);
 
-    offset_d = MotorRotationCount(motor_d) - offset_d;
-  	offset_e = MotorRotationCount(motor_e) - offset_e;
- }
-
-
-task main(){
-
-	float leitura_US_e, leitura_US_d;
-	int cor_d, cor_e;
-    float rotacao_e, rotacao_d, erro, historico = 0, ultimo_erro = 0, correcao, integrativo, derivativo;
-    float potencia_e, potencia_d;
-    SetSensorLowspeed(US_chao_d);
-    SetSensorLowspeed(US_chao_e);
-    SetHTColor2Mode(HT_esquerda, HT_CMD_COLOR2_ACTIVE);
-    SetHTColor2Mode(HT_direita, HT_CMD_COLOR2_ACTIVE);
-    SetSensorLowspeed (HT_direita);
-    SetSensorLowspeed (HT_esquerda);
-
-    while(1){
-	    while((le_cor(direita) == BRANCO || le_cor(direita) == FORA) && (le_cor(esquerda) == BRANCO || le_cor(esquerda) == FORA)){
-
-		    if(SensorUS(US_chao_e) >= distancia_do_chao || SensorUS(US_chao_d) >= distancia_do_chao){
-		    	Nao_Cai();
-		    }
-
-		    // Pega a cada iteração a atual rotação de cada motor
-		    rotacao_e = MotorRotationCount(motor_e) - offset_e;
-		    rotacao_d = MotorRotationCount(motor_d) - offset_d;
-
-		    // Nos diz o erro entre as rotações das rodas
-		    erro = rotacao_d - rotacao_e;
-
-		    // Somatório dos erros durante a execução do código, da menos importancia para o histório e mais para o erro atual
-		    historico = 0.666 * historico + erro;
-
-		    // Anti Wind-Up, serve para que o erro integral não exploda
-		    if(integrativo > 300){
-		      integrativo = 300;
-		    }else if(integrativo < -300){
-		      integrativo = -300;
-		    }
-
-		    // Calcula o erro instantâneo
-		    derivativo = (erro - ultimo_erro);
-		    ultimo_erro = erro;
-
-		    // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
-		    correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
-
-		    // Calcula a potencia de correção em torno da potencia inicial desejada
-		    potencia_e = potencia_inicial - correcao;
-		    potencia_d = potencia_inicial + correcao;
-
-		    // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
-		    OnRev(motor_e, potencia_e);
-		    OnRev(motor_d, potencia_d);
+		if(lado == esquerda){
+			while((MotorRotationCount(motor_e)) < 235){
+				OnFwd(motor_e, 50);
+				OnFwd(motor_d, -50);
+				NumOut(0, LCD_LINE1, MotorRotationCount(motor_e));
+				NumOut(0, LCD_LINE2, offset_e);
+			}
+		}else{
+			while((MotorRotationCount(motor_d)) < 235){
+				OnFwd(motor_e, -50);
+				OnFwd(motor_d, 50);
+			}
 		}
-		entra_reto_na_cor();
-		OnRev(ambos_motores, potencia_inicial);
-		Wait(1000);
-		Stop(1);
+
+		Off(ambos_motores);
+
 	}
-}
+
+
+	void entra_reto_na_cor(){ // Verifica as cores de cada HT e chama a função de correção
+		int htdir, htesq;
+
+	  htdir = le_cor(direita);
+	  htesq = le_cor(esquerda);
+
+	  if((htdir != BRANCO || htesq != BRANCO) && htesq != htdir && (htdir != FORA || htesq != FORA)){
+	  		if((htesq == BRANCO || htesq == FORA) && htdir != BRANCO){
+	  				entra_reto(esquerda);
+	  		}else{
+	  			   entra_reto(direita);
+	            }
+	  }
+	}
+
+	void entra_reto(int lado){ // Corrige a entrada nas cores
+
+		float offset_d, offset_e;
+
+		Off(ambos_motores);
+
+		if(lado == esquerda){
+			while(le_cor(esquerda) != le_cor(direita)){
+				OnFwd(motor_e, 50);
+	      		OnFwd(motor_d, -50);
+			}
+		}else{
+			while(le_cor(esquerda) != le_cor(direita)){
+				OnFwd(motor_d, 50);
+				OnFwd(motor_e, -50);
+			}
+		}
+		ResetRotationCount(ambos_motores);
+		Wait(100);
+	}
+
+	void Nao_Cai(){
+
+		float offset_d, offset_e;
+
+	  	Off(ambos_motores);
+	  	Wait(1000);
+	    // Enquanto está caindo
+	    if(SensorUS(US_chao_d) >= distancia_do_chao){
+	      // Para voltar para a pista é preciso girar a roda direita para frente e a esquerda para trás
+	      OnFwd(motor_d, 50);
+	      OnFwd(motor_e, 70);
+	      Wait(400);
+	    }
+
+	    // Checa se o robô está caindo da pista pelo seu lado esquerdo
+	    if(SensorUS(US_chao_e) >= distancia_do_chao){
+	      // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
+	      OnFwd(motor_e, 50);
+	      OnFwd(motor_d, 70);
+	      Wait(400);
+	    }
+	    Off(ambos_motores);
+	    ResetRotationCount(ambos_motores);
+	    Wait(100);
+	 }
+
+
+	task main(){
+
+		float leitura_US_e, leitura_US_d;
+		float offset_e, offset_d;
+		int cor_d, cor_e;
+	    float rotacao_e, rotacao_d, erro, historico = 0, ultimo_erro = 0, correcao, integrativo, derivativo;
+	    float potencia_e, potencia_d;
+	    SetSensorLowspeed(US_chao_d);
+	    SetSensorLowspeed(US_chao_e);
+	    SetSensorLowspeed (HT_direita);
+	    SetSensorLowspeed (HT_esquerda);
+	    SetHTColor2Mode(HT_esquerda, HT_CMD_COLOR2_ACTIVE);
+	    SetHTColor2Mode(HT_direita, HT_CMD_COLOR2_ACTIVE);
+
+	    while(1){
+		    while(1){
+		    	cor_e = le_cor(HT_esquerda);
+		    	if(cor_e != BRANCO){
+		    		Off(ambos_motores);
+		    		cor_e = le_cor(HT_esquerda);
+			    	if(cor_e == VERMELHO){
+			    		Off(ambos_motores);
+			    		OnRev(ambos_motores, 50);
+			    		Wait(600);
+			    		gira90(esquerda);
+			    		sai_da_cor(cor_e);
+			    	}else if(cor_e == VERDE){
+			    		Off(ambos_motores);
+			    		OnRev(ambos_motores, 50);
+			    		Wait(600);
+			    		gira90(direita);
+			    		sai_da_cor(cor_e);
+			    	}
+		    	}
+
+			    if(SensorUS(US_chao_e) >= distancia_do_chao || SensorUS(US_chao_d) >= distancia_do_chao){
+			    	Nao_Cai();
+			    }
+
+			    // Pega a cada iteração a atual rotação de cada motor
+			    rotacao_e = MotorRotationCount(motor_e);
+			    rotacao_d = MotorRotationCount(motor_d);
+
+			    // Nos diz o erro entre as rotações das rodas
+			    erro = rotacao_d - rotacao_e;
+
+			    // Somatório dos erros durante a execução do código, da menos importancia para o histório e mais para o erro atual
+			    historico = 0.666 * historico + erro;
+
+			    // Anti Wind-Up, serve para que o erro integral não exploda
+			    if(integrativo > 300){
+			      integrativo = 300;
+			    }else if(integrativo < -300){
+			      integrativo = -300;
+			    }
+
+			    // Calcula o erro instantâneo
+			    derivativo = (erro - ultimo_erro);
+			    ultimo_erro = erro;
+
+			    // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
+			    correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
+
+			    // Calcula a potencia de correção em torno da potencia inicial desejada
+			    potencia_e = potencia_inicial - correcao;
+			    potencia_d = potencia_inicial + correcao;
+
+			    // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
+			    OnRev(motor_e, potencia_e);
+			    OnRev(motor_d, potencia_d);
+			}
+			gira90(direita);
+			Wait(1000);
+			gira90(esquerda);
+			Wait(1000);
+		}
+	}
