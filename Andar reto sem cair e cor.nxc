@@ -6,10 +6,10 @@
 	#define US_chao_e IN_2      // SensorUS voltado para o chão esquerdo
 	#define HT_direita IN_3		// Sensor de cor da direita
 	#define HT_esquerda IN_4	// Sensor de cor da esquerda
-	#define kp 3
-	#define ki 3
-	#define kd 1
-	#define distancia_do_chao 10
+	#define kp 0.5
+	#define ki 0.1
+	#define kd 1.0
+	#define distancia_do_chao 9
 	#define esquerda 1
 	#define frente 2
 	#define direita 3
@@ -48,8 +48,7 @@
 		float sum, m, var; //m é a média aritmética, var é a variância e sum é a soma
 		float verm, verd, azul;
 		if(lado == direita){
-
-		ReadSensorHTColor2Active(HT_direita, num_1, verm_1, verd_1, azul_1, branco_1);
+			ReadSensorHTColor2Active(HT_direita, num_1, verm_1, verd_1, azul_1, branco_1);
 		}
 		else if (lado == esquerda) {
 			ReadSensorHTColor2Active(HT_esquerda, num_1, verm_1, verd_1, azul_1, branco_1);
@@ -84,8 +83,6 @@
 		while(cor_e != BRANCO && cor_d != BRANCO){
 			OnRev(ambos_motores,potencia_inicial/1.3);
 
-			cor_e = le_cor(esquerda);
-			cor_d = le_cor(direita);
 
 			if(cor_e == BRANCO && cor_d != BRANCO){
 
@@ -94,6 +91,16 @@
 				while(cor_e == BRANCO){
 					cor_e = le_cor(esquerda);
 				}
+				ResetRotationCount(ambos_motores);
+				Wait(100);
+				while(MotorRotationCount(motor_e) < 50){
+					OnFwd(motor_e, 50);
+				}
+				ResetRotationCount(ambos_motores);
+				Wait(100);
+				while(MotorRotationCount(motor_d) > -50){
+					OnRev(ambos_motores, potencia_inicial/1.3);
+				}
 			}else if(cor_d == BRANCO && cor_e != BRANCO){
 
 				Off(ambos_motores);
@@ -101,8 +108,22 @@
 				while(cor_d == BRANCO){
 					cor_d = le_cor(direita);
 				}
+				ResetRotationCount(ambos_motores);
+				Wait(100);
+				while(MotorRotationCount(motor_d) < 50){
+					OnFwd(motor_d, 50);
+				}
+				ResetRotationCount(ambos_motores);
+				Wait(100);
+				while(MotorRotationCount(motor_d) > -50){
+					OnRev(ambos_motores, potencia_inicial/1.3);
+				}
 			}
+			cor_e = le_cor(esquerda);
+			cor_d = le_cor(direita);
 		}
+		ResetRotationCount(ambos_motores);
+		Wait(100);
 	}
 
 	void gira90(int lado){
@@ -116,8 +137,6 @@
 			while((MotorRotationCount(motor_e)) < 235){
 				OnFwd(motor_e, 50);
 				OnFwd(motor_d, -50);
-				NumOut(0, LCD_LINE1, MotorRotationCount(motor_e));
-				NumOut(0, LCD_LINE2, offset_e);
 			}
 		}else{
 			while((MotorRotationCount(motor_d)) < 235){
@@ -173,22 +192,34 @@
 
 	  	Off(ambos_motores);
 	  	Wait(1000);
+
 	    // Enquanto está caindo
 	    if(SensorUS(US_chao_d) >= distancia_do_chao){
+	    	ResetRotationCount(ambos_motores);
+	    	Wait(100);
 	      // Para voltar para a pista é preciso girar a roda direita para frente e a esquerda para trás
-	      OnFwd(motor_d, 50);
-	      OnFwd(motor_e, 70);
-	      Wait(400);
+	    	while(MotorRotationCount(motor_d) < 50){
+	    		OnFwd(motor_d, potencia_inicial/1.3);
+		    	OnFwd(motor_e, potencia_inicial);
+	    	}
 	    }
 
 	    // Checa se o robô está caindo da pista pelo seu lado esquerdo
 	    if(SensorUS(US_chao_e) >= distancia_do_chao){
-	      // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
-	      OnFwd(motor_e, 50);
-	      OnFwd(motor_d, 70);
-	      Wait(400);
+	    	ResetRotationCount(ambos_motores);
+	    	Wait(100);
+		    // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
+		    while(MotorRotationCount(motor_e) < 50){
+			    OnFwd(motor_e, potencia_inicial/1.3);
+			    OnFwd(motor_d, potencia_inicial);
+			}
 	    }
 	    Off(ambos_motores);
+	    ResetRotationCount(ambos_motores);
+	    Wait(100);
+	    while(MotorRotationCount(motor_e) > -30){
+	    	OnRev(ambos_motores, potencia_inicial/1.3);
+	    }
 	    ResetRotationCount(ambos_motores);
 	    Wait(100);
 	 }
@@ -199,7 +230,7 @@
 		float leitura_US_e, leitura_US_d;
 		float offset_e, offset_d;
 		int cor_d, cor_e;
-	    float rotacao_e, rotacao_d, erro, historico = 0, ultimo_erro = 0, correcao, integrativo, derivativo;
+	    float rotacao_e, rotacao_d, erro, integrativo = 0, ultimo_erro = 0, correcao = 0, derivativo;
 	    float potencia_e, potencia_d;
 	    SetSensorLowspeed(US_chao_d);
 	    SetSensorLowspeed(US_chao_e);
@@ -208,66 +239,68 @@
 	    SetHTColor2Mode(HT_esquerda, HT_CMD_COLOR2_ACTIVE);
 	    SetHTColor2Mode(HT_direita, HT_CMD_COLOR2_ACTIVE);
 
+    
 	    while(1){
-		    while(1){
-		    	cor_e = le_cor(HT_esquerda);
-		    	if(cor_e != BRANCO){
+	    	cor_e = le_cor(HT_esquerda);
+	    	if(cor_e != BRANCO){
+	    		Off(ambos_motores);
+	    		Wait(500);
+	    		cor_e = le_cor(HT_esquerda);
+		    	if(cor_e == VERMELHO){
 		    		Off(ambos_motores);
-		    		cor_e = le_cor(HT_esquerda);
-			    	if(cor_e == VERMELHO){
-			    		Off(ambos_motores);
-			    		OnRev(ambos_motores, 50);
-			    		Wait(600);
-			    		gira90(esquerda);
-			    		sai_da_cor(cor_e);
-			    	}else if(cor_e == VERDE){
-			    		Off(ambos_motores);
-			    		OnRev(ambos_motores, 50);
-			    		Wait(600);
-			    		gira90(direita);
-			    		sai_da_cor(cor_e);
-			    	}
+		    		OnRev(ambos_motores, 50);
+		    		Wait(600);
+		    		gira90(esquerda);
+		    		sai_da_cor(cor_e);
+		    		ResetRotationCount(ambos_motores);
+		    		Wait(100);
+		    	}else if(cor_e == VERDE){
+		    		Off(ambos_motores);
+		    		OnRev(ambos_motores, 50);
+		    		Wait(600);
+		    		gira90(direita);
+		    		sai_da_cor(cor_e);
+		    		ResetRotationCount(ambos_motores);
+		    		Wait(100);
 		    	}
+	    	}
 
-			    if(SensorUS(US_chao_e) >= distancia_do_chao || SensorUS(US_chao_d) >= distancia_do_chao){
-			    	Nao_Cai();
-			    }
+		    if(SensorUS(US_chao_e) >= distancia_do_chao || SensorUS(US_chao_d) >= distancia_do_chao){
+		    	Nao_Cai();
+		    	ResetRotationCount(ambos_motores);
+		    	Wait(100);
+		    }
 
-			    // Pega a cada iteração a atual rotação de cada motor
-			    rotacao_e = MotorRotationCount(motor_e);
-			    rotacao_d = MotorRotationCount(motor_d);
+		    // Pega a cada iteração a atual rotação de cada motor
+		    rotacao_e = MotorRotationCount(motor_e);
+		    rotacao_d = MotorRotationCount(motor_d);
 
-			    // Nos diz o erro entre as rotações das rodas
-			    erro = rotacao_d - rotacao_e;
+		    // Nos diz o erro entre as rotações das rodas
+		    erro = rotacao_d - rotacao_e;
 
-			    // Somatório dos erros durante a execução do código, da menos importancia para o histório e mais para o erro atual
-			    historico = 0.666 * historico + erro;
+		    // Somatório dos erros durante a execução do código, da menos importancia para o histório e mais para o erro atual
+		    integrativo = 0.666 * integrativo + erro;
 
-			    // Anti Wind-Up, serve para que o erro integral não exploda
-			    if(integrativo > 300){
-			      integrativo = 300;
-			    }else if(integrativo < -300){
-			      integrativo = -300;
-			    }
+		    // Anti Wind-Up, serve para que o erro integral não exploda
+		    if(integrativo > 300){
+		      integrativo = 300;
+		    }else if(integrativo < -300){
+		      integrativo = -300;
+		    }
 
-			    // Calcula o erro instantâneo
-			    derivativo = (erro - ultimo_erro);
-			    ultimo_erro = erro;
+		    // Calcula o erro instantâneo
+		    derivativo = (erro - ultimo_erro);
+		    ultimo_erro = erro;
 
-			    // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
-			    correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
+		    // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
+		    correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
 
-			    // Calcula a potencia de correção em torno da potencia inicial desejada
-			    potencia_e = potencia_inicial - correcao;
-			    potencia_d = potencia_inicial + correcao;
+		    // Calcula a potencia de correção em torno da potencia inicial desejada
+		    potencia_e = potencia_inicial - correcao;
+		    potencia_d = potencia_inicial + correcao;
 
-			    // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
-			    OnRev(motor_e, potencia_e);
-			    OnRev(motor_d, potencia_d);
-			}
-			gira90(direita);
-			Wait(1000);
-			gira90(esquerda);
-			Wait(1000);
+		    // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
+		    OnRev(motor_e, potencia_e);
+		    OnRev(motor_d, potencia_d);
 		}
 	}
