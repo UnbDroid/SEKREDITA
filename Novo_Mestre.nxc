@@ -19,6 +19,21 @@
 #define distancia_do_chao 9
 
 
+
+//Mestre.
+//  As funções que funcionam no mestre são:
+//    - ReceiveRemoteNumber
+//    - SendRemoteNumber
+//  O parâmetro que funciona no mestre é apenas o NO_ERR
+//
+//Escravo.
+//  As funções que funcionam no escravo são:
+//    - ReceiveRemoteNumber
+//    - SendResponseNumber
+//  O parâmetro que funciona no escravo é apenas o STAT_MSG_EMPTY_MAILBOX
+    
+
+
 byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
 
 float pot(float a, int b) { // Potenciação
