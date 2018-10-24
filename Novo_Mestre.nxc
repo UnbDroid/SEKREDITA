@@ -1,11 +1,11 @@
 #define motor_e OUT_C        // Motor esquerdo
 #define motor_d OUT_A        // Motor direito
 #define motor_ambos OUT_AC
-#define potencia_inicial 50 // Potência de referência, usar OnRev para ir para frente
+#define potencia_inicial 65 // Potência de referência, usar OnRev para ir para frente
 #define US_chao_d IN_1      // SensorUS voltado para o chão direito
 #define US_chao_e IN_2      // SensorUS voltado para o chão esquerdo
-#define HT_direita IN_3		// Sensor de cor da direita
-#define HT_esquerda IN_4	// Sensor de cor da esquerda
+#define HT_direita IN_3   // Sensor de cor da direita
+#define HT_esquerda IN_4  // Sensor de cor da esquerda
 #define PRETO    1
 #define AZUL     2
 #define VERDE    3
@@ -16,22 +16,16 @@
 #define esquerda 1
 #define frente 2
 #define direita 3
-#define distancia_do_chao 9
-
-//Mestre.
-//  As funções que funcionam no mestre são:
-//    - ReceiveRemoteNumber
-//    - SendRemoteNumber
-//  O parâmetro que funciona no mestre é apenas o NO_ERR
-//
-//Escravo.
-//  As funções que funcionam no escravo são:
-//    - ReceiveRemoteNumber
-//    - SendResponseNumber
-//  O parâmetro que funciona no escravo é apenas o STAT_MSG_EMPTY_MAILBOX
-
+#define distancia_do_chao 9.5
 
 byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
+char direcao[10] = {'*','*','*','*','*','*','*','*','*'};
+//          Esq  Fre  Dir
+//Vermelho  [0]  [1]  [2]
+//   Verde  [3]  [4]  [5]
+//    Azul  [6]  [7]  [8]
+
+void gira90(int lado);
 
 float pot(float a, int b) { // Potenciação
   int i;
@@ -44,25 +38,72 @@ float pot(float a, int b) { // Potenciação
   return r;
 }
 
+void teste_cor(int cor){
+  int lado = 1;
+  int contador;
+  switch (cor){
+    case VERMELHO:
+      contador = 0;
+      if(direcao[0] == '1' || direcao[1] == '1' || direcao[2] == '1'){
+        while(contador < 3){
+          if(direcao[contador] == '1'){
+            gira90(lado);
+            break;
+          }
+          lado++;
+        }
+      }else{
+        contador -= 3;
+        while(direcao[contador] != '*'){
+          contador++;
+          lado++;
+        }
+        gira90(lado);
+      }
+      break;
+    case VERDE:
+      contador = 3;
+      if(direcao[3] == '1' || direcao[4] == '1' || direcao[5] == '1'){
+        while(contador < 6){
+          if(direcao[contador] == '1'){
+            gira90(lado);
+            break;
+          }
+          lado++;
+        }
+      }
+    break;
+    case AZUL:
+      contador = 6;
+      if(direcao[6] == '1' || direcao[7] == '1' || direcao[8] == '1'){
+        while(contador < 9){
+          if(direcao[contador] == '1'){
+            gira90(lado);
+            break;
+          }
+          lado++;
+        }
+      }
+    break; 
+  }
+}
+
 void gira90(int lado){
 
-	ResetRotationCount(motor_ambos);
-	Wait(100);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
 
-	if(lado == esquerda){
-		while((MotorRotationCount(motor_e)) < 235){
-			OnFwd(motor_e, 50);
-			OnFwd(motor_d, -50);
-		}
-	}else{
-		while((MotorRotationCount(motor_d)) < 235){
-			OnFwd(motor_e, -50);
-			OnFwd(motor_d, 50);
-		}
-	}
-
-	Off(motor_ambos);
-
+  if(lado == esquerda){
+    while((MotorRotationCount(motor_d)) > -275){
+      OnRev(motor_e, -potencia_inicial);
+      OnRev(motor_d, potencia_inicial);
+    }
+  }else{
+    while((MotorRotationCount(motor_d)) < 315){
+      OnRev(motor_e, potencia_inicial);
+      OnRev(motor_d, -potencia_inicial);
+    }
+  }
 }
 
 int le_cor (int lado) {
@@ -96,43 +137,32 @@ int le_cor (int lado) {
   return BRANCO;
 }
 
-void anda_100(){
-
-  ResetRotationCount(motor_ambos);
-  Wait(100);
-
-  while(MotorRotationCount(motor_e)>-100){
-    OnRev(motor_ambos,60);
-  }
-
-}
-
 void Nao_Cai(int lado){
 
-	Off(motor_ambos);
-	Wait(1000);
+  Off(motor_ambos);
+  Wait(1000);
 
   // Enquanto está caindo
   if(lado == direita){
-  	ResetRotationCount(motor_ambos);
-  	Wait(100);
+    ResetRotationCount(motor_ambos);
+    Wait(100);
     // Para voltar para a pista é preciso girar a roda direita para frente e a esquerda para trás
-  	while(MotorRotationCount(motor_e) < 70){
-  		OnFwd(motor_d, potencia_inicial*0.8);
-    	OnFwd(motor_e, potencia_inicial*0.8);
-  	}
+    while(MotorRotationCount(motor_e) < 70){
+      OnFwd(motor_d, potencia_inicial*0.8);
+      OnFwd(motor_e, potencia_inicial*0.8);
+    }
     Off(motor_ambos);
     while(MotorRotationCount(motor_e)<100){
       OnFwd(motor_e, potencia_inicial*0.8);
     }
   }else if(lado == esquerda){
     ResetRotationCount(motor_ambos);
-  	Wait(100);
+    Wait(100);
     // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
     while(MotorRotationCount(motor_d) < 70){
-	    OnFwd(motor_e, potencia_inicial*0.8);
-	    OnFwd(motor_d, potencia_inicial);
-	   }
+      OnFwd(motor_e, potencia_inicial*0.8);
+      OnFwd(motor_d, potencia_inicial);
+     }
      Off(motor_ambos);
      while(MotorRotationCount(motor_d)<100){
        OnFwd(motor_d, potencia_inicial*0.8);
@@ -144,23 +174,50 @@ void Nao_Cai(int lado){
   Wait(100);
 }
 
+void anda_200(){
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  while(MotorRotationCount(motor_d)>-200){
+    OnRev(motor_d, 60);
+    OnRev(motor_e, 70);
+  }
+  Off(motor_ambos);
+
+}
+
 void checa_cor(int ht_e){
 
   switch (ht_e){
-    case "PRETO":
+
+    case PRETO:
       Stop(1);
       break;
-    case "VERMELHO":
+    case VERMELHO:
+      Off(motor_ambos);
+      Wait(200);
       gira90(direita);
+      //teste_cor(VERMELHO);
+      anda_200();
+      anda_200();
       //sai_da_cor();
       break;
-    case "VERDE":
+    case VERDE:
+      Off(motor_ambos);
+      Wait(200);
       gira90(esquerda);
+      //teste_cor(VERDE);
+      anda_200();
+      anda_200();
       //sai_da_cor();
       break;
-    case "AZUL":
+    case AZUL:
+      teste_cor(AZUL);
+      Stop(1);
       //sai_da_cor();
       break;
+
   }
 }
 
@@ -175,9 +232,10 @@ void Andar(){
   */
 
   // Constantes do controle
-    float kp = 1.0;
-    float ki = 0.5;
-    float kd = 1.5;
+
+    float kp = 0.5;
+    float ki = 0.1;
+    float kd = 1;
 
     int lado = 0;
 
@@ -197,26 +255,23 @@ void Andar(){
       ht_d = le_cor(direita);
 
       if(ht_e != BRANCO || ht_d =! BRANCO){
-        anda_100();
-        ht_e = le_cor(esquerda);
-        checa_cor(ht_e);
+        Off(motor_ambos);
+        anda_200();
+        PlayTone(500,500);
+        checa_cor(le_cor(direita));
       }
 
-      // Pega a cada iteração a atual rotação de cada motor
-      rotacao_e = MotorRotationCount(motor_e);
-      rotacao_d = MotorRotationCount(motor_d);
-
       // Nos diz o erro entre as rotações das rodas
-      erro = rotacao_d - rotacao_e;
+      erro = MotorRotationCount(motor_d) - MotorRotationCount(motor_e);
 
       // Somatório dos erros durante a execução do código, da menos importancia para o histório e mais para o erro atual
       integrativo = 0.666 * integrativo + erro;
 
       // Anti Wind-Up, serve para que o erro integral não exploda
-      if(integrativo > 50){
-        integrativo = 50;
-      }else if(integrativo < -50){
-        integrativo = -50;
+      if(integrativo > 15){
+        integrativo = 15;
+      }else if(integrativo < -15){
+        integrativo = -15;
       }
 
       // Calcula o erro instantâneo
@@ -241,14 +296,14 @@ void Andar(){
       }
       ClearScreen();
       NumOut(1,LCD_LINE1,erro);
-      NumOut(1,LCD_LINE2,integrativo);
-      NumOut(1,LCD_LINE3,derivativo);
+      NumOut(1,LCD_LINE2,MotorRotationCount(motor_e));
+      NumOut(1,LCD_LINE3,MotorRotationCount(motor_d));
       NumOut(1,LCD_LINE4,potencia_e);
       NumOut(1,LCD_LINE5,potencia_d);
 
     }
     // Se o programa sair do laço anterior ele está caindo
-    //Nao_Cai(lado);
+    Nao_Cai(lado);
 }
 
 task main() {
