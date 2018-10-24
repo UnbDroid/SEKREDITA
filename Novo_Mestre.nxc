@@ -18,8 +18,6 @@
 #define direita 3
 #define distancia_do_chao 9
 
-
-
 //Mestre.
 //  As funções que funcionam no mestre são:
 //    - ReceiveRemoteNumber
@@ -31,7 +29,6 @@
 //    - ReceiveRemoteNumber
 //    - SendResponseNumber
 //  O parâmetro que funciona no escravo é apenas o STAT_MSG_EMPTY_MAILBOX
-    
 
 
 byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
@@ -45,6 +42,27 @@ float pot(float a, int b) { // Potenciação
   }
 
   return r;
+}
+
+void gira90(int lado){
+
+	ResetRotationCount(motor_ambos);
+	Wait(100);
+
+	if(lado == esquerda){
+		while((MotorRotationCount(motor_e)) < 235){
+			OnFwd(motor_e, 50);
+			OnFwd(motor_d, -50);
+		}
+	}else{
+		while((MotorRotationCount(motor_d)) < 235){
+			OnFwd(motor_e, -50);
+			OnFwd(motor_d, 50);
+		}
+	}
+
+	Off(motor_ambos);
+
 }
 
 int le_cor (int lado) {
@@ -76,6 +94,17 @@ int le_cor (int lado) {
   if( m <= 50 && var <= 5) return PRETO;
 
   return BRANCO;
+}
+
+void anda_100(){
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  while(MotorRotationCount(motor_e)>-100){
+    OnRev(motor_ambos,60);
+  }
+
 }
 
 void Nao_Cai(int lado){
@@ -115,63 +144,25 @@ void Nao_Cai(int lado){
   Wait(100);
 }
 
-/* void nao_cair(float leitura_US_e, float leitura_US_d, int distancia_do_chao){
+void checa_cor(int ht_e){
 
-  Off(motor_ambos);
-
-  // Checa se o robô está caindo da pista pelo seu lado direito
-  if(leitura_US_d > distancia_do_chao){
-    ClearScreen();
-    TextOut(0,LCD_LINE1,"CAIR DIREITA");
-    OnRev(motor_ambos, potencia_inicial*0.5);
-    Off(motor_ambos);
-
-    ResetRotationCount(motor_ambos);
-    Wait(100);
-
-    // Da uma ré antes de tentar arrumar
-    while(MotorRotationCount(motor_e)<40){
-      OnFwd(motor_ambos, potencia_inicial);
-
-    }
-    Off(motor_ambos);
-
-    // Concerta a orientação
-    while(MotorRotationCount(motor_e)<60){
-      OnFwd(motor_e, potencia_inicial*0.5);
-    }
-    Off(motor_ambos);
-    // Reseta o contador de giros para manter funcionando o PID
-    ResetRotationCount(motor_ambos);
-    Wait(100);
-
-  // Checa se o robô está caindo da pista pelo seu lado esquerdo
-  }else if (leitura_US_e > distancia_do_chao){
-    ClearScreen();
-    TextOut(0,LCD_LINE1,"CAIR ESQUERDA");
-    OnRev(motor_ambos, potencia_inicial*0.5);
-    Off(motor_ambos);
-
-    ResetRotationCount(motor_ambos);
-    Wait(100);
-
-    // Da uma ré antes de tentar arrumar
-    while(MotorRotationCount(motor_d)<40){
-      OnFwd(motor_ambos, potencia_inicial);
-
-    }
-    Off(motor_ambos);
-
-    // Concerta a orientação
-    while(MotorRotationCount(motor_d)<60){
-      OnFwd(motor_d, potencia_inicial*0.5);
-    }
-    Off(motor_ambos);
-    // Reseta o contador de giros para manter funcionando o PID
-    ResetRotationCount(motor_ambos);
-    Wait(100);
+  switch (ht_e){
+    case "PRETO":
+      Stop(1);
+      break;
+    case "VERMELHO":
+      gira90(direita);
+      //sai_da_cor();
+      break;
+    case "VERDE":
+      gira90(esquerda);
+      //sai_da_cor();
+      break;
+    case "AZUL":
+      //sai_da_cor();
+      break;
   }
-} */
+}
 
 void Andar(){
   /*
@@ -184,9 +175,9 @@ void Andar(){
   */
 
   // Constantes do controle
-    float kp = 0.5;
-    float ki = 0.1;
-    float kd = 1;
+    float kp = 1.0;
+    float ki = 0.5;
+    float kd = 1.5;
 
     int lado = 0;
 
@@ -202,14 +193,13 @@ void Andar(){
     // Enquanto não está caindo
     while(lado == 0){
 
-      ht_e = le_cor(direita);
-      ht_d = le_cor(esquerda);
+      ht_e = le_cor(esquerda);
+      ht_d = le_cor(direita);
 
       if(ht_e != BRANCO || ht_d =! BRANCO){
-        ClearScreen();
-        TextOut(0,LCD_LINE1,"COR !=BRANCO");
-        Off(motor_ambos);
-        Wait(2000);
+        anda_100();
+        ht_e = le_cor(esquerda);
+        checa_cor(ht_e);
       }
 
       // Pega a cada iteração a atual rotação de cada motor
@@ -258,7 +248,7 @@ void Andar(){
 
     }
     // Se o programa sair do laço anterior ele está caindo
-    Nao_Cai(lado);
+    //Nao_Cai(lado);
 }
 
 task main() {
