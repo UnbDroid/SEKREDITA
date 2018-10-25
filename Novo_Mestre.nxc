@@ -19,7 +19,9 @@
 #define distancia_do_chao 9.5
 
 byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
+int tentativa = 0, ultimo_lado = 0;
 char direcao[10] = {'*','*','*','*','*','*','*','*','*'};
+
 //          Esq  Fre  Dir
 //Vermelho  [0]  [1]  [2]
 //   Verde  [3]  [4]  [5]
@@ -38,50 +40,67 @@ float pot(float a, int b) { // Potenciação
   return r;
 }
 
+void grava_cor(){
+  if(ultimo_lado == VERMELHO){
+
+  }
+}
+
 void teste_cor(int cor){
   int lado = 1;
   int contador;
   switch (cor){
     case VERMELHO:
+      ultimo_lado = VERMELHO;
       contador = 0;
-      if(direcao[0] == '1' || direcao[1] == '1' || direcao[2] == '1'){
-        while(contador < 3){
-          if(direcao[contador] == '1'){
-            gira90(lado);
-            break;
-          }
-          lado++;
-        }
-      }else{
-        contador -= 3;
-        while(direcao[contador] != '*'){
-          contador++;
-          lado++;
+      if(tentativa = 0){
+        while(direcao[contador] == '0'){
+           contador++;
+           lado++
         }
         gira90(lado);
+      }else{
+        if(tentativa = 1){
+          tentativa = 0;
+          if(direcao[contador+1] == '1'){
+            gira90(esquerda);
+          }
+        }
       }
       break;
     case VERDE:
+    ultimo_lado = VERDE;
       contador = 3;
-      if(direcao[3] == '1' || direcao[4] == '1' || direcao[5] == '1'){
-        while(contador < 6){
-          if(direcao[contador] == '1'){
-            gira90(lado);
-            break;
+      if(tentativa = 0){
+        while(direcao[contador] == '0'){
+           contador++;
+           lado++
+        }
+        gira90(lado);
+      }else{
+        if(tentativa = 1){
+          tentativa = 0;
+          if(direcao[contador+1] == '1'){
+            gira90(esquerda);
           }
-          lado++;
         }
       }
     break;
     case AZUL:
+    ultimo_lado = AZUL;
       contador = 6;
-      if(direcao[6] == '1' || direcao[7] == '1' || direcao[8] == '1'){
-        while(contador < 9){
-          if(direcao[contador] == '1'){
-            gira90(lado);
-            break;
+      if(tentativa = 0){
+        while(direcao[contador] == '0'){
+           contador++;
+           lado++
+        }
+        gira90(lado);
+      }else{
+        if(tentativa = 1){
+          tentativa = 0;
+          if(direcao[contador+1] == '1'){
+            gira90(esquerda);
           }
-          lado++;
         }
       }
     break; 
@@ -98,12 +117,50 @@ void gira90(int lado){
       OnRev(motor_e, -potencia_inicial);
       OnRev(motor_d, potencia_inicial);
     }
-  }else{
+  }else if(lado == direita){
     while((MotorRotationCount(motor_d)) < 315){
       OnRev(motor_e, potencia_inicial);
       OnRev(motor_d, -potencia_inicial);
     }
   }
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+}
+
+void gira_anti_lado(lado){
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  if(lado == esquerda){
+    while((MotorRotationCount(motor_d)) > -275){
+      OnRev(motor_e, -potencia_inicial);
+      OnRev(motor_d, potencia_inicial);
+    }
+  }else if(lado == direita){
+    while((MotorRotationCount(motor_d)) < 315){
+      OnRev(motor_e, potencia_inicial);
+      OnRev(motor_d, -potencia_inicial);
+    }
+  }else{
+    gira180();
+  }
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+}
+
+void gira180(){
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  while(MotorRotationCount(motor_d) > -550){
+    OnRev(motor_e, -potencia_inicial);
+    OnRev(motor_d, potencia_inicial);
+  }
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
 }
 
 int le_cor (int lado) {
@@ -192,13 +249,16 @@ void checa_cor(int ht_e){
   switch (ht_e){
 
     case PRETO:
-      Stop(1);
+      grava_cor();
+      gira180();
+      anda_200();
+      anda_200();
       break;
     case VERMELHO:
       Off(motor_ambos);
       Wait(200);
-      gira90(direita);
-      //teste_cor(VERMELHO);
+      //gira90(direita); //pista q a gnt tava testando
+      teste_cor(VERMELHO);
       anda_200();
       anda_200();
       //sai_da_cor();
