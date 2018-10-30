@@ -1,0 +1,14 @@
+byte handle = 0;
+#define FILE_NAME "arq.dat" // coloca o nome do Arquivo
+#define FILE_SIZE 11
+
+
+task main() {
+
+	unsigned int rtn_code = DeleteFile(FILE_NAME);
+	if(rtn_code == LDR_SUCCESS)	NumOut(0, LCD_LINE2, rtn_code);
+	else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!"); 
+	else TextOut(0, LCD_LINE1, "Erro!");
+	Wait(2500);
+
+}
