@@ -1,0 +1,55 @@
+byte handle = 0;
+#define FILE_NAME "arq.dat" // coloca o nome do Arquivo
+#define FILE_SIZE 11
+
+
+void cria_arq() {
+	unsigned int rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+	unsigned int esc;
+	string m = "*********";
+
+	switch (rtn_code) {
+		case LDR_SUCCESS:
+				esc = Write(handle, m);
+
+				if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+				else {
+					NumOut(0, LCD_LINE4, esc);
+					TextOut(0, LCD_LINE5, "Não escreveu!");
+				}
+
+
+			break;
+		case LDR_FILEISBUSY:
+			TextOut(0, LCD_LINE2, "File is Busy");
+			break;
+		case LDR_FILENOTFOUND:
+			TextOut(0, LCD_LINE2, "File not found");
+			break;
+		case LDR_FILEEXISTS:
+			TextOut(0, LCD_LINE2, "File exists");
+			break;
+		case LDR_FILEISFULL:
+			TextOut(0, LCD_LINE2, "File is full");
+			break;
+
+		default:
+			NumOut (0, LCD_LINE2, rtn_code);
+			TextOut(0, LCD_LINE4, "Erro!");
+			break;
+	}
+
+	CloseFile(handle);
+	Wait(2500);
+	
+}
+
+task main() {
+
+	unsigned int rtn_code = DeleteFile(FILE_NAME);
+	if(rtn_code == LDR_SUCCESS)	TextOut(0, LCD_LINE2, "Apagado!");
+	else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!"); 
+	else TextOut(0, LCD_LINE1, "Erro!");
+	 cria_arq();
+
+}
