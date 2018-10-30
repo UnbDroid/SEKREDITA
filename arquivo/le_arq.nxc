@@ -1,0 +1,53 @@
+byte handle = 0;
+#define FILE_NAME "arq.dat"
+#define FILE_SIZE 11
+
+
+task main(){
+
+   int i;
+   char r;
+	unsigned int size;
+	unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
+	NumOut(0, LCD_LINE1, size);
+   char m[10];
+
+	ClearLine(LCD_LINE1);
+	NumOut(0, LCD_LINE1, rtn_code);
+   // Início da leitura dos valores
+   for (i = 0; i<9; i++){
+   
+      rtn_code = Read(handle, r);
+
+      switch (rtn_code)
+      {
+      case LDR_SUCCESS:
+         m[i] = r;
+         break;
+     case LDR_ENDOFFILE:
+      m[3] = 80;
+         break;
+      default:
+         TextOut(0, LCD_LINE1, "read failed     ");
+      }
+   }
+   //Fim da leitura dos valores
+   m[9] = 0;
+   
+    ClearLine(LCD_LINE1);
+      NumOut(0, LCD_LINE1, m[0]);
+      NumOut(30, LCD_LINE1, m[1]);
+      NumOut(60, LCD_LINE1, m[2]);
+      NumOut(0, LCD_LINE2, m[3]);
+      NumOut(30, LCD_LINE2, m[4]);
+      NumOut(60, LCD_LINE2, m[5]);
+      NumOut(0, LCD_LINE3, m[6]);
+      NumOut(30, LCD_LINE3, m[7]);
+      NumOut(60, LCD_LINE3, m[8]);
+      NumOut(30, LCD_LINE4, m[9]);
+   
+   	Wait(2000);
+      CloseFile(handle);
+
+
+}
