@@ -1,0 +1,166 @@
+byte handle = 0;
+#define FILE_NAME "arq.dat"
+#define FILE_SIZE 11
+
+const string asteriscos = "*********";
+string vetor; //vetor SEMPRE tem que ter 9 caracteres, no máximo 10, sendo o último o byte 0.
+
+void le_arq(){
+
+   int i;
+   char r;
+	unsigned int size;
+	unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
+	NumOut(0, LCD_LINE1, size);
+   char m[10];
+
+	ClearLine(LCD_LINE1);
+	NumOut(0, LCD_LINE1, rtn_code);
+   // Início da leitura dos valores
+   for (i = 0; i<9; i++){
+   
+      rtn_code = Read(handle, r);
+
+      switch (rtn_code)
+      {
+      case LDR_SUCCESS:
+         m[i] = r;
+         break;
+     case LDR_ENDOFFILE:
+      m[3] = 80;
+         break;
+      default:
+         TextOut(0, LCD_LINE1, "read failed     ");
+      }
+   }
+   //Fim da leitura dos valores
+   m[9] = 0;
+   
+    ClearLine(LCD_LINE1);
+      NumOut(0, LCD_LINE1, m[0]);
+      NumOut(30, LCD_LINE1, m[1]);
+      NumOut(60, LCD_LINE1, m[2]);
+      NumOut(0, LCD_LINE2, m[3]);
+      NumOut(30, LCD_LINE2, m[4]);
+      NumOut(60, LCD_LINE2, m[5]);
+      NumOut(0, LCD_LINE3, m[6]);
+      NumOut(30, LCD_LINE3, m[7]);
+      NumOut(60, LCD_LINE3, m[8]);
+      NumOut(30, LCD_LINE4, m[9]);
+   
+   	Wait(2000);
+   	CloseFile(handle);
+
+
+}
+
+void cria_arq() {
+	unsigned int rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+	unsigned int esc;
+
+	switch (rtn_code) {
+		case LDR_SUCCESS:
+				esc = Write(handle, asteriscos);
+
+				if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+				else {
+					NumOut(0, LCD_LINE4, esc);
+					TextOut(0, LCD_LINE5, "Não escreveu!");
+				}
+
+
+			break;
+		case LDR_FILEISBUSY:
+			TextOut(0, LCD_LINE2, "File is Busy");
+			break;
+		case LDR_FILENOTFOUND:
+			TextOut(0, LCD_LINE2, "File not found");
+			break;
+		case LDR_FILEEXISTS:
+			TextOut(0, LCD_LINE2, "File exists");
+			break;
+		case LDR_FILEISFULL:
+			TextOut(0, LCD_LINE2, "File is full");
+			break;
+
+		default:
+			NumOut (0, LCD_LINE2, rtn_code);
+			TextOut(0, LCD_LINE4, "Erro!");
+			break;
+	}
+
+	CloseFile(handle);
+	Wait(2500);
+	ClearScreen();
+	
+}
+
+void del_e_cria () {
+	unsigned int rtn_code = DeleteFile(FILE_NAME);
+	if(rtn_code == LDR_SUCCESS)	TextOut(0, LCD_LINE2, "Apagado!");
+	else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!"); 
+	else TextOut(0, LCD_LINE1, "Erro!");
+	cria_arq();
+
+}
+
+void reescreve () {
+	unsigned int esc;
+	unsigned int rtn_code = DeleteFile(FILE_NAME);
+	if(rtn_code == LDR_SUCCESS)	TextOut(0, LCD_LINE2, "Pt1!");
+	else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!"); 
+	else TextOut(0, LCD_LINE1, "Erro!");
+	Wait(2000);
+	rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+		switch (rtn_code) {
+		case LDR_SUCCESS:
+				esc = Write(handle, vetor);
+
+				if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+				else {
+					NumOut(0, LCD_LINE4, esc);
+					TextOut(0, LCD_LINE5, "Não escreveu!");
+				}
+
+
+			break;
+		case LDR_FILEISBUSY:
+			TextOut(0, LCD_LINE2, "File is Busy");
+			break;
+		case LDR_FILENOTFOUND:
+			TextOut(0, LCD_LINE2, "File not found");
+			break;
+		case LDR_FILEEXISTS:
+			TextOut(0, LCD_LINE2, "File exists");
+			break;
+		case LDR_FILEISFULL:
+			TextOut(0, LCD_LINE2, "File is full");
+			break;
+
+		default:
+			NumOut (0, LCD_LINE2, rtn_code);
+			TextOut(0, LCD_LINE4, "Erro!");
+			break;
+	}
+
+	CloseFile(handle);
+	Wait(2500);
+	ClearScreen();
+}
+
+task main () {
+
+	vetor = "ABCDEFGHI";
+	del_e_cria();
+	le_arq();
+	Wait(3000);
+	ClearScreen();
+	reescreve();
+	le_arq();
+	Wait(3000);
+	ClearScreen();
+
+
+
+
+}
