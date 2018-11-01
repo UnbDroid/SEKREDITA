@@ -3,52 +3,49 @@ byte handle = 0;
 #define FILE_SIZE 11
 
 const string asteriscos = "*********";
-string vetor; //vetor SEMPRE tem que ter 9 caracteres, no máximo 10, sendo o último o byte 0.
+string entrada, saida; //vetor SEMPRE tem que ter 9 caracteres, no máximo 10, sendo o último o byte 0.
+char direcao[9];
 
 void le_arq(){
 
-   int i;
-   char r;
+    char r;
 	unsigned int size;
 	unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
-	NumOut(0, LCD_LINE1, size);
-   char m[10];
 
+	//Linhas de teste, No código Real, são apagadas
 	ClearLine(LCD_LINE1);
 	NumOut(0, LCD_LINE1, rtn_code);
-   // Início da leitura dos valores
-   for (i = 0; i<9; i++){
-   
-      rtn_code = Read(handle, r);
+	Wait(1500);
+	//Fim linhas de teste
 
-      switch (rtn_code)
-      {
-      case LDR_SUCCESS:
-         m[i] = r;
-         break;
-     case LDR_ENDOFFILE:
-      m[3] = 80;
-         break;
-      default:
-         TextOut(0, LCD_LINE1, "read failed     ");
-      }
+
+   // Início da leitura dos valores
+   for (int i = 0; i < 9; i++){
+   
+	   	rtn_code = Read(handle, r);
+
+	    switch (rtn_code){
+	     	 case LDR_SUCCESS:
+	       		direcao[i] = r;
+	        	break;
+	    	case LDR_ENDOFFILE:
+	     		TextOut(0, LCD_LINE1, "ERRO, EOF!");
+	     		Wait(5000);
+	     		Stop(1);
+	        	break;
+	      default:
+	        	TextOut(0, LCD_LINE1, "ERRO!");
+	    }
    }
-   //Fim da leitura dos valores
-   m[9] = 0;
-   
-    ClearLine(LCD_LINE1);
-      NumOut(0, LCD_LINE1, m[0]);
-      NumOut(30, LCD_LINE1, m[1]);
-      NumOut(60, LCD_LINE1, m[2]);
-      NumOut(0, LCD_LINE2, m[3]);
-      NumOut(30, LCD_LINE2, m[4]);
-      NumOut(60, LCD_LINE2, m[5]);
-      NumOut(0, LCD_LINE3, m[6]);
-      NumOut(30, LCD_LINE3, m[7]);
-      NumOut(60, LCD_LINE3, m[8]);
-      NumOut(30, LCD_LINE4, m[9]);
-   
-   	Wait(2000);
+
+	saida = ByteArrayToStr(direcao);
+
+	//Linhas de teste, No código Real, são apagadas
+	TextOut(0, LCD_LINE1, saida);
+   	Wait(1500);
+   	ClearScreen();
+   	//Fim linhas de teste
+
    	CloseFile(handle);
 
 
@@ -58,17 +55,26 @@ void cria_arq() {
 	unsigned int rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
 	unsigned int esc;
 
+	direcao[0] = '*';
+	direcao[1] = '*';
+	direcao[2] = '*';
+	direcao[3] = '*';
+	direcao[4] = '*';
+	direcao[5] = '*';
+	direcao[6] = '*';
+	direcao[7] = '*';
+	direcao[8] = '*';
+
+	entrada = ByteArrayToStr(direcao);
+
 	switch (rtn_code) {
 		case LDR_SUCCESS:
-				esc = Write(handle, asteriscos);
-
-				if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
-				else {
-					NumOut(0, LCD_LINE4, esc);
-					TextOut(0, LCD_LINE5, "Não escreveu!");
-				}
-
-
+			esc = Write(handle, entrada);
+			if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+			else {
+				NumOut(0, LCD_LINE4, esc);
+				TextOut(0, LCD_LINE5, "Não escreveu!");
+			}
 			break;
 		case LDR_FILEISBUSY:
 			TextOut(0, LCD_LINE2, "File is Busy");
@@ -90,39 +96,52 @@ void cria_arq() {
 	}
 
 	CloseFile(handle);
-	Wait(2500);
+
+	//Linhas de teste
+	Wait(1500);
 	ClearScreen();
+	//Fim linhas de teste
 	
 }
 
-void del_e_cria () {
+void deleta () {
 	unsigned int rtn_code = DeleteFile(FILE_NAME);
 	if(rtn_code == LDR_SUCCESS)	TextOut(0, LCD_LINE2, "Apagado!");
 	else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!"); 
 	else TextOut(0, LCD_LINE1, "Erro!");
-	cria_arq();
 
+	//Linhas de teste
+	Wait(1500);
+	ClearScreen();
+	//Fim linhas de teste
+	
 }
 
 void reescreve () {
 	unsigned int esc;
 	unsigned int rtn_code = DeleteFile(FILE_NAME);
-	if(rtn_code == LDR_SUCCESS)	TextOut(0, LCD_LINE2, "Pt1!");
+	int i;
+
+	entrada = ByteArrayToStr(direcao);
+
+	if(rtn_code == LDR_SUCCESS)	TextOut(0, LCD_LINE2, "Deletou!");
 	else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!"); 
 	else TextOut(0, LCD_LINE1, "Erro!");
+
+	//Linhas de teste
 	Wait(2000);
+	ClearScreen();
+	//Fim linhas de teste
+
 	rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
 		switch (rtn_code) {
 		case LDR_SUCCESS:
-				esc = Write(handle, vetor);
-
+				esc = Write(handle, entrada);
 				if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
 				else {
 					NumOut(0, LCD_LINE4, esc);
 					TextOut(0, LCD_LINE5, "Não escreveu!");
 				}
-
-
 			break;
 		case LDR_FILEISBUSY:
 			TextOut(0, LCD_LINE2, "File is Busy");
@@ -144,16 +163,20 @@ void reescreve () {
 	}
 
 	CloseFile(handle);
-	Wait(2500);
+
+	//Linhas de teste
+	Wait(1500);
 	ClearScreen();
+	//Fim linhas de teste
 }
 
 task main () {
 
-	vetor = "ABCDEFGHI";
-	del_e_cria();
+
+	ClearScreen();
+	deleta();
+	cria_arq();
 	le_arq();
-	Wait(3000);
 	ClearScreen();
 	reescreve();
 	le_arq();
