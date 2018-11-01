@@ -30,6 +30,7 @@ char direcao[10] = {'*','*','*','*','*','*','*','*','*'};
 void gira90(int lado);
 void gira180();
 int le_cor(int lado);
+void Nao_Cai(int lado);
 
 float pot(float a, int b) { // Potenciação
   int i;
@@ -108,8 +109,15 @@ void sai_da_cor(){
   Wait(200);
 
   while(le_cor(direita) != BRANCO || le_cor(esquerda) != BRANCO){
-    OnRev(motor_e, potencia_inicial + 10);
-    OnRev(motor_d, potencia_inicial);
+    if(SensorUS(US_chao_e) > distancia_do_chao){
+      Off(motor_ambos);
+      Nao_Cai(esquerda);
+    }else if(SensorUS(US_chao_d) > distancia_do_chao){
+      Off(motor_ambos);
+      Nao_Cai(direita);
+    }
+    OnRev(motor_e, potencia_inicial + 5);
+    OnRev(motor_d, potencia_inicial - 5);
   }
 
   Off(motor_ambos);
@@ -239,7 +247,7 @@ void gira180(){
   ResetRotationCount(motor_ambos);
   Wait(100);
 
-  while(MotorRotationCount(motor_d) > -520){
+  while(MotorRotationCount(motor_d) > -500){
     OnRev(motor_e, -potencia_inicial-5);
     OnRev(motor_d, potencia_inicial+5);
   }
@@ -336,7 +344,7 @@ void checa_cor(int ht_e){
 
     case PRETO:
       Off(motor_ambos);
-      Wait(400);
+      Wait(600);
       tentativa++;
       grava_preto();
       ultimo_lado = PRETO;
@@ -345,19 +353,19 @@ void checa_cor(int ht_e){
       break;
     case VERMELHO:
       Off(motor_ambos);
-      Wait(400);
+      Wait(600);
       teste_cor(VERMELHO);
       sai_da_cor();
       break;
     case VERDE:
       Off(motor_ambos);
-      Wait(400);
+      Wait(600);
       teste_cor(VERDE);
       sai_da_cor();
       break;
     case AZUL:
       Off(motor_ambos);
-      Wait(400);
+      Wait(600);
       teste_cor(AZUL);
       sai_da_cor();
       break;
