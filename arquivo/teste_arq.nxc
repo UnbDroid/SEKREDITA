@@ -2,8 +2,7 @@ byte handle = 0;
 #define FILE_NAME "arq.dat"
 #define FILE_SIZE 11
 
-const string asteriscos = "*********";
-string entrada, saida; //vetor SEMPRE tem que ter 9 caracteres, no máximo 10, sendo o último o byte 0.
+string entrada, saida; //Interface vetor de char e string no arquivo
 char direcao[9];
 
 void le_arq(){
