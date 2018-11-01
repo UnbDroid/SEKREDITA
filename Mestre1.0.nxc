@@ -29,6 +29,7 @@ char direcao[10] = {'*','*','*','*','*','*','*','*','*'};
 
 void gira90(int lado);
 void gira180();
+int le_cor(int lado);
 
 float pot(float a, int b) { // Potenciação
   int i;
@@ -80,6 +81,41 @@ void grava_certo(){
     direcao[contador - 3] = '0';
     direcao[contador - 6] = '0';
   } 
+}
+
+void entra_na_cor(){
+
+  Off(motor_ambos);
+
+  if(le_cor(esquerda) != BRANCO){
+    while(le_cor(direita) == BRANCO){
+      OnRev(motor_d, potencia_inicial);
+    }
+  }else if(le_cor(direita) != BRANCO){
+    while(le_cor(esquerda) == BRANCO){
+      OnRev(motor_e, potencia_inicial);
+    }
+  }
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+}
+
+void sai_da_cor(){
+
+  Off(motor_ambos);
+  Wait(200);
+
+  while(le_cor(direita) != BRANCO || le_cor(esquerda) != BRANCO){
+    OnRev(motor_e, potencia_inicial + 10);
+    OnRev(motor_d, potencia_inicial);
+  }
+
+  Off(motor_ambos);
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
 
 }
 
@@ -155,7 +191,7 @@ void teste_cor(int cor){
       }
     break; 
     case AZUL:
-      if(ultimo_lado != PRETO && !cor_3){
+      if(ultimo_lado != PRETO){
         grava_certo();
       }
       ultimo_lado = AZUL;
@@ -190,7 +226,7 @@ void gira90(int lado){
       OnRev(motor_d, potencia_inicial);
     }
   }else if(lado == direita){
-    while((MotorRotationCount(motor_d)) < 315){
+    while((MotorRotationCount(motor_d)) < 245){
       OnRev(motor_e, potencia_inicial);
       OnRev(motor_d, -potencia_inicial);
     }
@@ -204,8 +240,8 @@ void gira180(){
   Wait(100);
 
   while(MotorRotationCount(motor_d) > -520){
-    OnRev(motor_e, -potencia_inicial);
-    OnRev(motor_d, potencia_inicial);
+    OnRev(motor_e, -potencia_inicial-5);
+    OnRev(motor_d, potencia_inicial+5);
   }
 
   ResetRotationCount(motor_ambos);
@@ -247,7 +283,7 @@ int le_cor (int lado) {
 void Nao_Cai(int lado){
 
   Off(motor_ambos);
-  Wait(1000);
+  Wait(700);
 
   // Enquanto está caindo
   if(lado == direita){
@@ -255,40 +291,40 @@ void Nao_Cai(int lado){
     Wait(100);
     // Para voltar para a pista é preciso girar a roda direita para frente e a esquerda para trás
     while(MotorRotationCount(motor_e) < 70){
-      OnFwd(motor_d, potencia_inicial*0.8);
-      OnFwd(motor_e, potencia_inicial*0.8);
+      OnFwd(motor_d, potencia_inicial);
+      OnFwd(motor_e, potencia_inicial);
     }
     Off(motor_ambos);
     while(MotorRotationCount(motor_e)<100){
-      OnFwd(motor_e, potencia_inicial*0.8);
+      OnFwd(motor_e, potencia_inicial);
     }
   }else if(lado == esquerda){
     ResetRotationCount(motor_ambos);
     Wait(100);
     // Para voltar para a pista é preciso girar a roda esquerda para frente e a direita para trás
     while(MotorRotationCount(motor_d) < 70){
-      OnFwd(motor_e, potencia_inicial*0.8);
+      OnFwd(motor_e, potencia_inicial);
       OnFwd(motor_d, potencia_inicial);
      }
      Off(motor_ambos);
      while(MotorRotationCount(motor_d)<100){
-       OnFwd(motor_d, potencia_inicial*0.8);
+       OnFwd(motor_d, potencia_inicial);
      }
   }
   Off(motor_ambos);
-  Wait(1000);
+  Wait(500);
   ResetRotationCount(motor_ambos);
   Wait(100);
 }
 
-void anda_200(){
+void centraliza(){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
 
-  while(MotorRotationCount(motor_d)>-200){
-    OnRev(motor_d, 60);
-    OnRev(motor_e, 70);
+  while(MotorRotationCount(motor_d)>-140){
+    OnRev(motor_d, potencia_inicial);
+    OnRev(motor_e, potencia_inicial + 10);
   }
   Off(motor_ambos);
 
@@ -299,36 +335,31 @@ void checa_cor(int ht_e){
   switch (ht_e){
 
     case PRETO:
+      Off(motor_ambos);
+      Wait(400);
       tentativa++;
       grava_preto();
       ultimo_lado = PRETO;
       gira180();
-      anda_200();
-      anda_200();
+      sai_da_cor();
       break;
     case VERMELHO:
       Off(motor_ambos);
-      Wait(200);
+      Wait(400);
       teste_cor(VERMELHO);
-      anda_200();
-      anda_200();
-      //sai_da_cor();
+      sai_da_cor();
       break;
     case VERDE:
       Off(motor_ambos);
-      Wait(200);
+      Wait(400);
       teste_cor(VERDE);
-      anda_200();
-      anda_200();
-      //sai_da_cor();
+      sai_da_cor();
       break;
     case AZUL:
       Off(motor_ambos);
-      Wait(200);
+      Wait(400);
       teste_cor(AZUL);
-      anda_200();
-      anda_200();
-      //sai_da_cor();
+      sai_da_cor();
       break;
 
   }
@@ -369,7 +400,8 @@ void Andar(){
 
       if(ht_e != BRANCO || ht_d =! BRANCO){
         Off(motor_ambos);
-        anda_200();
+        entra_na_cor();
+        centraliza();
         PlayTone(500,500);
         checa_cor(le_cor(direita));
       }
@@ -430,5 +462,8 @@ task main() {
 
   while(true){
     Andar();
+    /*sobe_rampa();
+    Plaza();
+    desce_rampa();*/
   }
 }
