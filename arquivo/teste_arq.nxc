@@ -1,3 +1,6 @@
+/*Esse código possui todas as funções de arquivo, prontas para implementação, tendo em vista que o vetor
+utilizado para escrever no arquivo deve ter 9 caracteres, o arquivo possuirá sempre 10 de tamanho. */
+
 byte handle = 0;
 #define FILE_NAME "arq.dat"
 #define FILE_SIZE 11
