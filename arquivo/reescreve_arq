@@ -1,0 +1,129 @@
+byte handle = 0;
+#define FILE_NAME "arq.dat"
+#define FILE_SIZE 11
+
+string entrada, saida; //Interface vetor de char e string no arquivo
+char direcao[9];
+void reescreve () {
+   unsigned int esc;
+   unsigned int rtn_code = DeleteFile(FILE_NAME);
+   int i;
+
+   entrada = ByteArrayToStr(direcao);
+
+   ClearScreen();
+   if(rtn_code == LDR_SUCCESS)   TextOut(0, LCD_LINE2, "Deletou!");
+   else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!"); 
+   else TextOut(0, LCD_LINE1, "Erro!");
+
+
+   rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+   ClearScreen();
+      switch (rtn_code) {
+      case LDR_SUCCESS:
+            esc = Write(handle, entrada);
+            if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+            else {
+               NumOut(0, LCD_LINE4, esc);
+               TextOut(0, LCD_LINE5, "Não escreveu!");
+            }
+         break;
+      case LDR_FILEISBUSY:
+         TextOut(0, LCD_LINE2, "File is Busy");
+         break;
+      case LDR_FILENOTFOUND:
+         TextOut(0, LCD_LINE2, "File not found");
+         break;
+      case LDR_FILEEXISTS:
+         TextOut(0, LCD_LINE2, "File exists");
+         break;
+      case LDR_FILEISFULL:
+         TextOut(0, LCD_LINE2, "File is full");
+         break;
+
+      default:
+         NumOut (0, LCD_LINE2, rtn_code);
+         TextOut(0, LCD_LINE4, "Erro!");
+         break;
+   }
+
+   CloseFile(handle);
+}
+
+void le_arq(){
+
+    char r;
+   unsigned int size;
+   unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
+
+   // Início da leitura dos valores
+   for (int i = 0; i < 9; i++){
+   
+         rtn_code = Read(handle, r);
+
+      ClearScreen();
+       switch (rtn_code){
+          case LDR_SUCCESS:
+               direcao[i] = r;
+            break;
+         case LDR_ENDOFFILE:
+            TextOut(0, LCD_LINE1, "ERRO, EOF!");
+            Wait(5000);
+            Stop(1);
+            break;
+         default:
+            TextOut(0, LCD_LINE1, "ERRO!");
+       }
+   }
+
+   saida = ByteArrayToStr(direcao);
+   ClearScreen();
+   //Linhas de teste
+   TextOut(0, LCD_LINE1, saida);
+      Wait(1500);
+      ClearScreen();
+      //Fim linhas de teste
+
+      CloseFile(handle);
+}
+
+task main () {
+  
+  TextOut(0, LCD_LINE3, "Antes:");
+  Wait(1000);
+  ClearScreen();
+  le_arq();
+  direcao[0] = 'T';
+  direcao[1] = 'e';
+  direcao[2] = 's';
+  direcao[3] = 't';
+  direcao[4] = 'a';
+  direcao[5] = 'n';
+  direcao[6] = 'd';
+  direcao[7] = 'o';
+  direcao[8] = '!';
+  reescreve();
+  ClearScreen();
+  TextOut(0, LCD_LINE3, "Depois:");
+  Wait(1000);
+  ClearScreen();
+  
+  le_arq();
+  direcao[0] = '1';
+  direcao[1] = '2';
+  direcao[2] = '3';
+  direcao[3] = '4';
+  direcao[4] = '5';
+  direcao[5] = '6';
+  direcao[6] = '7';
+  direcao[7] = '8';
+  direcao[8] = '9';
+  ClearScreen();
+  TextOut(0, LCD_LINE3, "Muda de novo:");
+  Wait(1000);
+  ClearScreen();
+  reescreve();
+  
+  le_arq();
+  
+}
