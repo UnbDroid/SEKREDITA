@@ -17,10 +17,14 @@
 #define frente 2
 #define direita 3
 #define distancia_do_chao 9.5
+#define FILE_NAME "arq.dat"
+#define FILE_SIZE 11
 
 byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
 int tentativa = 0, ultimo_lado = PRETO, cor_1=0, cor_2=0, cor_3=0;
-char direcao[10] = {'*','*','*','*','*','*','*','*','*'};
+char direcao[9];
+byte handle = 0;
+string entrada, saida; //Interface vetor de char e string no arquivo
 
 //          Esq  Fre  Dir
 //Vermelho  [0]  [1]  [2]
@@ -31,6 +35,7 @@ void gira90(int lado);
 void gira180();
 int le_cor(int lado);
 void Nao_Cai(int lado);
+void le_arq();
 
 float pot(float a, int b) { // Potenciação
   int i;
@@ -459,6 +464,93 @@ void Andar(){
     Nao_Cai(lado);
 }
 
+void le_arq(){
+
+    char r;
+  unsigned int size;
+  unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
+
+  //Linhas de teste
+  ClearLine(LCD_LINE1);
+  NumOut(0, LCD_LINE1, rtn_code);
+  Wait(1500);
+  //Fim linhas de teste
+
+
+   // Início da leitura dos valores
+   for (int i = 0; i < 9; i++){
+   
+      rtn_code = Read(handle, r);
+
+      switch (rtn_code){
+         case LDR_SUCCESS:
+            direcao[i] = r;
+            break;
+        case LDR_ENDOFFILE:
+          TextOut(0, LCD_LINE1, "ERRO, EOF!");
+          Wait(5000);
+          Stop(1);
+            break;
+        default:
+            TextOut(0, LCD_LINE1, "ERRO!");
+      }
+   }
+
+  saida = ByteArrayToStr(direcao);
+
+    CloseFile(handle);
+
+
+}
+void cria_arq() {
+  unsigned int rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+  unsigned int esc;
+
+
+
+  switch (rtn_code) {
+    case LDR_SUCCESS:
+      direcao[0] = '*';
+      direcao[1] = '*';
+      direcao[2] = '*';
+      direcao[3] = '*';
+      direcao[4] = '*';
+      direcao[5] = '*';
+      direcao[6] = '*';
+      direcao[7] = '*';
+      direcao[8] = '*';
+      entrada = ByteArrayToStr(direcao);
+      esc = Write(handle, entrada);
+      if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+      else {
+        NumOut(0, LCD_LINE4, esc);
+        TextOut(0, LCD_LINE5, "Não escreveu!");
+      }
+      break;
+    case LDR_FILEISBUSY:
+      TextOut(0, LCD_LINE2, "File is Busy");
+      break;
+    case LDR_FILENOTFOUND:
+      TextOut(0, LCD_LINE2, "File not found");
+      break;
+    case LDR_FILEEXISTS:
+    le_arq
+      TextOut(0, LCD_LINE2, "File exists");
+      break;
+    case LDR_FILEISFULL:
+      TextOut(0, LCD_LINE2, "File is full");
+      break;
+
+    default:
+      NumOut (0, LCD_LINE2, rtn_code);
+      TextOut(0, LCD_LINE4, "Erro!");
+      break;
+  }
+
+  CloseFile(handle);
+
+}
+
 task main() {
 
   SetSensorLowspeed(US_chao_d);
@@ -467,6 +559,7 @@ task main() {
   SetSensorLowspeed (HT_esquerda);
   SetHTColor2Mode(HT_esquerda, HT_CMD_COLOR2_ACTIVE);
   SetHTColor2Mode(HT_direita, HT_CMD_COLOR2_ACTIVE);
+  cria_arq();
 
   while(true){
     Andar();
