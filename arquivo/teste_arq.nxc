@@ -11,7 +11,7 @@ void le_arq(){
 	unsigned int size;
 	unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
 
-	//Linhas de teste, No código Real, são apagadas
+	//Linhas de teste
 	ClearLine(LCD_LINE1);
 	NumOut(0, LCD_LINE1, rtn_code);
 	Wait(1500);
@@ -39,7 +39,7 @@ void le_arq(){
 
 	saida = ByteArrayToStr(direcao);
 
-	//Linhas de teste, No código Real, são apagadas
+	//Linhas de teste
 	TextOut(0, LCD_LINE1, saida);
    	Wait(1500);
    	ClearScreen();
