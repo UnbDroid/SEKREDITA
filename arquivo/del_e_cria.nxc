@@ -1,6 +1,9 @@
 byte handle = 0;
-#define FILE_NAME "arq.dat" // coloca o nome do Arquivo
+#define FILE_NAME "arq.dat"
 #define FILE_SIZE 11
+
+string entrada, saida; //vetor SEMPRE tem que ter 9 caracteres, no máximo 10, sendo o último o byte 0.
+char direcao[9];
 
 void cria_arq() {
 	unsigned int rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
