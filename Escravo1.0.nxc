@@ -8,7 +8,7 @@
 #define PORTA_D OUT_C
 #define RAMPA OUT_B
 #define PORTAS OUT_AC
-#define Distancia_do_Boneco 25
+#define Distancia_do_Boneco 15
 #define esquerda 1
 #define frente 2
 #define direita 3
@@ -61,15 +61,22 @@ task main(){
 	int i=0;
 	BTCheck(0);
 	while(1){
+
 		while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX);
+
 
 		while(SensorUS(Ultra_Boneco_Direita) > Distancia_do_Boneco && SensorUS(Ultra_Boneco_Esquerda) > Distancia_do_Boneco);
 
 		if(SensorUS(Ultra_Boneco_Direita) < Distancia_do_Boneco){
-			SendResponseNumber(OUT_MBOX, direita);
+			while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX){
+				SendResponseNumber(OUT_MBOX, direita);
+			}
 		}else{
-			SendResponseNumber(OUT_MBOX, esquerda);
+			while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX){
+				SendResponseNumber(OUT_MBOX, esquerda);
+			}
 		}
-		pega_boneco();
+		Stop(1);
+		//pega_boneco();
 	}
 }
