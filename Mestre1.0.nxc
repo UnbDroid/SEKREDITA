@@ -46,6 +46,7 @@ void gira180();
 int le_cor(int lado);
 void Nao_Cai(int lado);
 void le_arq();
+void reescreve();
 
 sub BTCheck(int conn){
   if (!BluetoothStatus(conn)==NO_ERR){
@@ -106,6 +107,7 @@ void grava_certo(){
     direcao[contador - 3] = '0';
     direcao[contador - 6] = '0';
   }
+  reescreve();
 }
 
 void entra_na_cor(){
@@ -125,6 +127,52 @@ void entra_na_cor(){
   ResetRotationCount(motor_ambos);
   Wait(100);
 
+}
+
+void reescreve () {
+   unsigned int esc;
+   unsigned int rtn_code = DeleteFile(FILE_NAME);
+   int i;
+
+   entrada = ByteArrayToStr(direcao);
+
+   ClearScreen();
+   if(rtn_code == LDR_SUCCESS)   TextOut(0, LCD_LINE2, "Deletou!");
+   else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!");
+   else TextOut(0, LCD_LINE1, "Erro!");
+
+
+   rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+   ClearScreen();
+      switch (rtn_code) {
+      case LDR_SUCCESS:
+            esc = Write(handle, entrada);
+            if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+            else {
+               NumOut(0, LCD_LINE4, esc);
+               TextOut(0, LCD_LINE5, "Não escreveu!");
+            }
+         break;
+      case LDR_FILEISBUSY:
+         TextOut(0, LCD_LINE2, "File is Busy");
+         break;
+      case LDR_FILENOTFOUND:
+         TextOut(0, LCD_LINE2, "File not found");
+         break;
+      case LDR_FILEEXISTS:
+         TextOut(0, LCD_LINE2, "File exists");
+         break;
+      case LDR_FILEISFULL:
+         TextOut(0, LCD_LINE2, "File is full");
+         break;
+
+      default:
+         NumOut (0, LCD_LINE2, rtn_code);
+         TextOut(0, LCD_LINE4, "Erro!");
+         break;
+   }
+
+   CloseFile(handle);
 }
 
 void sai_da_cor(){
@@ -171,7 +219,7 @@ void sai_da_cor(){
 
 void grava_preto(){
   int contador;
-  
+
   ultima_direcao = 1;
 
   if(ultimo_lado == VERMELHO){
@@ -196,6 +244,7 @@ void grava_preto(){
     }
     direcao[contador] = '0';
   }
+  reescreve();
 }
 
 void teste_cor(int cor){
@@ -689,7 +738,7 @@ task main() {
         // Plaza();
         // desce_rampa();
       }
-        
+
 
     }
   }
