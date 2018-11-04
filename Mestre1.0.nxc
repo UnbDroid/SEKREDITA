@@ -361,8 +361,9 @@ void gira180(){
   Wait(100);
 
   while(MotorRotationCount(motor_d) > -480){
-    OnRev(motor_e, -potencia_inicial-5);
-    OnRev(motor_d, potencia_inicial+5);
+    correcao =kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+    OnRev(motor_e, -1*(potencia_inicial - correcao));
+    OnRev(motor_d, potencia_inicial + correcao);
   }
 
   ResetRotationCount(motor_ambos);
