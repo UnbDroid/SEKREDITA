@@ -25,8 +25,8 @@
 #define IN_MBOX 1
 
 
-float leitura_US_e[3] ={0,0,0,0}, leitura_US_d[3] ={0,0,0,0};
-// VariÃ¡veis do filtro de US
+float leitura_US_e[3] ={9,9,9,9}, leitura_US_d[3] ={9,9,9,9};
+// Variáveis do filtro de US
 int contador = 0;
 float media_US_d,media_US_e;
 
@@ -35,11 +35,6 @@ int tentativa = 0, ultima_direcao = 0, ultimo_lado = PRETO, cor_1=0, cor_2=0, co
 char direcao[9];
 byte handle = 0;
 string entrada, saida; //Interface vetor de char e string no arquivo
-
-//          Esq  Fre  Dir
-//Vermelho  [0]  [1]  [2]
-//   Verde  [3]  [4]  [5]
-//    Azul  [6]  [7]  [8]
 
 void gira90(int lado);
 void gira180();
@@ -56,7 +51,7 @@ sub BTCheck(int conn){
    }
 }
 
-float pot(float a, int b) { // PotenciaÃ§Ã£o
+float pot(float a, int b) { // Potenciação
   int i;
   float r=1;
 
@@ -171,7 +166,7 @@ void sai_da_cor(){
 
 void grava_preto(){
   int contador;
-  
+
   ultima_direcao = 1;
 
   if(ultimo_lado == VERMELHO){
@@ -468,12 +463,12 @@ void inverte_cor(){
 
 int Andar(){
   /*
-      Entradas:     A funÃ§Ã£o nÃ£o tem argumentos.
-      SaÃ­das:       A funÃ§Ã£o nÃ£o tem retornos.
-      ComentÃ¡rios:  Essa funÃ§Ã£o implementa o controle de posiÃ§Ã£o angular no plano XZ(paralelo ao chÃ£o) de um robÃ´ mÃ³vel
-                    Ela utiliza o erro entre a mediÃ§Ã£o dos encoders de cada motor para ajustar a potÃªncia mandanda para
-                    cada motor de modo a tentar manter o robÃ´ em uma trajetÃ³ria linear. Essa funÃ§Ã£o roda atÃ© que algum
-                    sensor Ultrasom retorne um valor que acuse cair da pista entÃ£o chama a funÃ§Ã£o para corrigir isso
+      Entradas:     A função não tem argumentos.
+      Saídas:       Retorna 1 se tiver achado uma rampa.
+      Comentários:  Essa função implementa o controle de posição angular no plano XZ(paralelo ao chão) de um robô móvel.
+                    Ela utiliza o erro entre a medição dos encoders de cada motor para ajustar a potência mandanda para
+                    cada motor de modo a tentar manter o robô em uma trajetória linear. Ela roda até o robô achar uma
+                    rampa fazendo sepre a checagem de cor e ultrasom do chão.
   */
 
   // Constantes do controle
@@ -482,7 +477,7 @@ int Andar(){
     float ki = 0.1;
     float kd = 1;
 
-    int lado = 0;
+    int i;
 
     float ht_e, ht_d;
 
@@ -490,25 +485,19 @@ int Andar(){
     float rotacao_e, rotacao_d, erro, correcao, derivativo, integrativo = 0, ultimo_erro = 0;
     float potencia_e, potencia_d;
 
-    // VariÃ¡veis utilizadas para filtrar a distancia do chÃ£o
-    int i;
+    while(1){
 
-    // Enquanto nÃ£o estÃ¡ caindo
-    while(lado == 0){
-
+      // Lê a cor do chão com os HT e checa para ver qual a ação a ser tomada
       if(le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO){
         Off(motor_ambos);
         entra_na_cor();
         checa_cor(le_cor(direita));
       }
 
-      // Nos diz o erro entre as rotaÃ§Ãµes das rodas
+      // Nos diz o erro entre as rotações das rodas
       erro = MotorRotationCount(motor_d) - MotorRotationCount(motor_e);
 
-      // SomatÃ³rio dos erros durante a execuÃ§Ã£o do cÃ³digo, da menos importancia para o histÃ³rio e mais para o erro atual
-      integrativo = 0.666 * integrativo + erro;
-
-      // Anti Wind-Up, serve para que o erro integral nÃ£o exploda
+      // Limita a ação da soma integral do erro
       if(integrativo > 15){
         integrativo = 15;
       }else if(integrativo < -15){
@@ -521,57 +510,47 @@ int Andar(){
         Off(motor_ambos);
         Wait(2000);
         while(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR);
-
       }
 
-      // Calcula o erro instantÃ¢neo
+      // Parte derivativa
       derivativo = (erro - ultimo_erro);
       ultimo_erro = erro;
 
-      // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuiÃ§Ãµes
+      // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
       correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
 
-      // Calcula a potencia de correÃ§Ã£o em torno da potencia inicial desejada
+      // Calcula a potência de correção em torno da potência inicial desejada
       potencia_e = potencia_inicial - correcao;
       potencia_d = potencia_inicial + correcao;
 
-      // OnRev foi utilizado graÃ§as a orientaÃ§Ã£o invertida dos motores do nosso robÃ´.
+      // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
       OnRev(motor_e, potencia_e);
       OnRev(motor_d, potencia_d);
-      // Atualiza a leitura dos US_chao
 
+      // Realiza um filtro de média aritimética móvel para a leitura dos Sensores Ultrasom do chão
       leitura_US_d[contador%4] = SensorUS(US_chao_d);
       leitura_US_e[contador%4] = SensorUS(US_chao_e);
       contador++;
-
       for(i = 0;i < 3;i++){
         media_US_e += leitura_US_e[i];
         media_US_d += leitura_US_d[i];
       }
-
       media_US_d = media_US_d/4;
       media_US_e = media_US_e/4;
 
-      ClearScreen();
-      NumOut(0,LCD_LINE1,media_US_e);
-      NumOut(0,LCD_LINE2,media_US_d);
-
-      if((media_US_d < distancia_da_rampa || media_US_e < distancia_da_rampa)&&contador>4){
+      // Se achar rampa deve retornar 1 para entrar na rotina da rampa
+      if(media_US_d < distancia_da_rampa || media_US_e < distancia_da_rampa){
        return 1;
       }
 
-      ClearScreen();
-      NumOut(0,LCD_LINE1,media_US_e);
-      NumOut(0,LCD_LINE2,media_US_d);
-
+      // Checa para ver se está caindo da pista
       if(media_US_e > distancia_do_chao){
-        lado = esquerda;
+        Nao_Cai(esquerda);
       }else if (media_US_d > distancia_do_chao){
-        lado = direita;
+        Nao_Cai(direita);
       }
     }
-    // Se o programa sair do laÃ§o anterior ele estÃ¡ caindo
-    Nao_Cai(lado);
+    // Não deveria entrar aqui nunca
     return 0;
 }
 
@@ -689,7 +668,7 @@ task main() {
         // Plaza();
         // desce_rampa();
       }
-        
+
 
     }
   }
