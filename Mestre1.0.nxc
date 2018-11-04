@@ -6,6 +6,9 @@
 #define US_chao_e IN_2      // SensorUS voltado para o chÃ£o esquerdo
 #define HT_direita IN_3   // Sensor de cor da direita
 #define HT_esquerda IN_4  // Sensor de cor da esquerda
+#define kp 0.5
+#define ki 0.1
+#define kd 1.0
 #define PRETO    1
 #define AZUL     2
 #define VERDE    3
@@ -23,7 +26,6 @@
 #define BT_CONN 1
 #define OUT_MBOX 5
 #define IN_MBOX 1
-
 
 float leitura_US_e[3] ={9,9,9,9}, leitura_US_d[3] ={9,9,9,9};
 // VariÃ¡veis do filtro de US
@@ -197,13 +199,9 @@ void sai_da_cor(){
       media_US_e += leitura_US_e[i];
       media_US_d += leitura_US_d[i];
     }
+
     media_US_d = media_US_d/4;
     media_US_e = media_US_e/4;
-
-    ClearScreen();
-    NumOut(0,LCD_LINE1,media_US_e);
-    NumOut(0,LCD_LINE2,media_US_d);
-
 
     if(media_US_e > distancia_do_chao){
       Off(motor_ambos);
@@ -212,8 +210,11 @@ void sai_da_cor(){
       Off(motor_ambos);
       Nao_Cai(direita);
     }
-    OnRev(motor_e, potencia_inicial+5);
-    OnRev(motor_d, potencia_inicial-5);
+
+    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnRev(motor_e, potencia_inicial - correcao);
+    OnRev(motor_d, potencia_inicial + correcao);
+
   }
 
   Off(motor_ambos);
@@ -339,13 +340,15 @@ void gira90(int lado){
 
   if(lado == esquerda){
     while((MotorRotationCount(motor_d)) > -215){
-      OnRev(motor_e, -potencia_inicial);
-      OnRev(motor_d, potencia_inicial);
+      correcao =kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+      OnRev(motor_e, -1*(potencia_inicial - correcao));
+      OnRev(motor_d, potencia_inicial + correcao);
     }
   }else if(lado == direita){
     while((MotorRotationCount(motor_d)) < 215){
-      OnRev(motor_e, potencia_inicial);
-      OnRev(motor_d, -potencia_inicial);
+      correcao =kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+      OnRev(motor_e, potencia_inicial - correcao);
+      OnRev(motor_d, -1*(potencia_inicial + correcao));
     }
   }
   ResetRotationCount(motor_ambos);
@@ -373,8 +376,9 @@ void re(int graus){
   ResetRotationCount(motor_ambos);
   Wait(100);
   while(MotorRotationCount(motor_d) < graus){
-    OnRev(motor_d, -potencia_inicial);
-    OnRev(motor_e, -potencia_inicial - 8);
+    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnFwd(motor_e, potencia_inicial + correcao);
+    OnFwd(motor_d, potencia_inicial - correcao);
   }
   Off(motor_ambos);
   ResetRotationCount(motor_ambos);
@@ -463,15 +467,17 @@ void Nao_Cai(int lado){
 
 }
 
-// Essa função anda o suficiente para o robo se centralizar numa cor
+// Essa função anda o suficiente para o robô se centralizar numa cor
 void centraliza(){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
 
+  // Anda reto alguns centímetros mantendo um controle proporcional
   while(MotorRotationCount(motor_d)>-150){
-    OnRev(motor_d, potencia_inicial);
-    OnRev(motor_e, potencia_inicial + 10);
+    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnRev(motor_e, potencia_inicial - correcao);
+    OnRev(motor_d, potencia_inicial + correcao);
   }
   Off(motor_ambos);
 
@@ -564,7 +570,7 @@ void gira_boneco(int lado){
       if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
       condicao = 1;
       }
-    }  
+    }
   }else{
     while(condicao == 0){
       OnRev(motor_e, -potencia_inicial);
@@ -572,7 +578,7 @@ void gira_boneco(int lado){
       if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
       condicao = 1;
       }
-    }  
+    }
   }
   Off(motor_ambos);
 }
@@ -588,10 +594,6 @@ int Andar(){
   */
 
   // Constantes do controle
-
-    float kp = 0.5;
-    float ki = 0.1;
-    float kd = 1;
 
     int i;
 
@@ -610,22 +612,24 @@ int Andar(){
         checa_cor(le_cor(direita));
       }
 
-      // Nos diz o erro entre as rotações das rodas
-      erro = MotorRotationCount(motor_d) - MotorRotationCount(motor_e);
-
-      // Limita a ação da soma integral do erro
-      if(integrativo > 15){
-        integrativo = 15;
-      }else if(integrativo < -15){
-        integrativo = -15;
-      }
-
       if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){
         SendRemoteNumber(BT_CONN, OUT_MBOX, 1);
         PlayTone(400, 400);
         Off(motor_ambos);
         Wait(2000);
         while(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR);
+      }
+
+      // Nos diz o erro entre as rotações das rodas
+      erro = MotorRotationCount(motor_d) - MotorRotationCount(motor_e);
+
+      integral += erro;
+
+      // Limita a ação da soma integral do erro
+      if(integrativo > 15){
+        integrativo = 15;
+      }else if(integrativo < -15){
+        integrativo = -15;
       }
 
       // Parte derivativa
