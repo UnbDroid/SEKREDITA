@@ -16,8 +16,8 @@
 #define esquerda 1
 #define frente 2
 #define direita 3
-#define distancia_do_chao 9.8
-#define distancia_da_rampa 7.1
+#define distancia_do_chao 10
+#define distancia_da_rampa 7.5
 #define FILE_NAME "arq.dat"
 #define FILE_SIZE 11
 #define BT_CONN 1
@@ -26,7 +26,7 @@
 
 
 float leitura_US_e[3] ={9,9,9,9}, leitura_US_d[3] ={9,9,9,9};
-// Variáveis do filtro de US
+// VariÃ¡veis do filtro de US
 int contador = 0;
 float media_US_d,media_US_e;
 
@@ -36,12 +36,19 @@ char direcao[9];
 byte handle = 0;
 string entrada, saida; //Interface vetor de char e string no arquivo
 
+//          Esq  Fre  Dir
+//Vermelho  [0]  [1]  [2]
+//   Verde  [3]  [4]  [5]
+//    Azul  [6]  [7]  [8]
+
 void gira90(int lado);
 void gira180();
 int le_cor(int lado);
 void Nao_Cai(int lado);
 void le_arq();
+void reescreve();
 
+// Testa a conectividade bluetooth
 sub BTCheck(int conn){
   if (!BluetoothStatus(conn)==NO_ERR){
     ClearScreen();
@@ -51,7 +58,8 @@ sub BTCheck(int conn){
    }
 }
 
-float pot(float a, int b) { // Potenciação
+// Essa função faz potenciação
+float pot(float a, int b) { // PotenciaÃ§Ã£o
   int i;
   float r=1;
 
@@ -62,6 +70,7 @@ float pot(float a, int b) { // Potenciação
   return r;
 }
 
+// Essa função escreve '1' na ultima direção testada do robo e escreve zero nas outras duas, assim como na mesma coluna do 1
 void grava_certo(){
   int contador;
   if(ultimo_lado == VERMELHO){
@@ -101,8 +110,10 @@ void grava_certo(){
     direcao[contador - 3] = '0';
     direcao[contador - 6] = '0';
   }
+  reescreve();
 }
 
+// Essa função corrige erros grandes ao entrar em uma nova cor
 void entra_na_cor(){
 
   Off(motor_ambos);
@@ -122,6 +133,54 @@ void entra_na_cor(){
 
 }
 
+// Essa função apaga o arquivo e escreve todos os elementos do vetor de direçao em um novo arquivo
+void reescreve () {
+   unsigned int esc;
+   unsigned int rtn_code = DeleteFile(FILE_NAME);
+   int i;
+
+   entrada = ByteArrayToStr(direcao);
+
+   ClearScreen();
+   if(rtn_code == LDR_SUCCESS)   TextOut(0, LCD_LINE2, "Deletou!");
+   else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!");
+   else TextOut(0, LCD_LINE1, "Erro!");
+
+
+   rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+   ClearScreen();
+      switch (rtn_code) {
+      case LDR_SUCCESS:
+            esc = Write(handle, entrada);
+            if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+            else {
+               NumOut(0, LCD_LINE4, esc);
+               TextOut(0, LCD_LINE5, "Não escreveu!");
+            }
+         break;
+      case LDR_FILEISBUSY:
+         TextOut(0, LCD_LINE2, "File is Busy");
+         break;
+      case LDR_FILENOTFOUND:
+         TextOut(0, LCD_LINE2, "File not found");
+         break;
+      case LDR_FILEEXISTS:
+         TextOut(0, LCD_LINE2, "File exists");
+         break;
+      case LDR_FILEISFULL:
+         TextOut(0, LCD_LINE2, "File is full");
+         break;
+
+      default:
+         NumOut (0, LCD_LINE2, rtn_code);
+         TextOut(0, LCD_LINE4, "Erro!");
+         break;
+   }
+
+   CloseFile(handle);
+}
+
+// Essa função sai da cor evitando o robo de cair
 void sai_da_cor(){
 
   Off(motor_ambos);
@@ -164,6 +223,7 @@ void sai_da_cor(){
 
 }
 
+// Essa função grava a última tentativa do robo como 0 na matriz, que representa q ele errou
 void grava_preto(){
   int contador;
 
@@ -191,8 +251,10 @@ void grava_preto(){
     }
     direcao[contador] = '0';
   }
+  reescreve();
 }
 
+// Essa função decide pra qual lado girar apos estar centralizado numa cor
 void teste_cor(int cor){
   int lado = 1;
   int contador;
@@ -269,18 +331,19 @@ void teste_cor(int cor){
   }
 }
 
+// Essa função gira 90° com argumento do lado
 void gira90(int lado){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
 
   if(lado == esquerda){
-    while((MotorRotationCount(motor_d)) > -245){
+    while((MotorRotationCount(motor_d)) > -215){
       OnRev(motor_e, -potencia_inicial);
       OnRev(motor_d, potencia_inicial);
     }
   }else if(lado == direita){
-    while((MotorRotationCount(motor_d)) < 245){
+    while((MotorRotationCount(motor_d)) < 215){
       OnRev(motor_e, potencia_inicial);
       OnRev(motor_d, -potencia_inicial);
     }
@@ -289,11 +352,12 @@ void gira90(int lado){
   Wait(100);
 }
 
+// Essa função gira 180°
 void gira180(){
   ResetRotationCount(motor_ambos);
   Wait(100);
 
-  while(MotorRotationCount(motor_d) > -500){
+  while(MotorRotationCount(motor_d) > -480){
     OnRev(motor_e, -potencia_inicial-5);
     OnRev(motor_d, potencia_inicial+5);
   }
@@ -303,11 +367,12 @@ void gira180(){
 
 }
 
-void re(){
+// Essa função recebe uma quantidade de graus que se converterá em ré
+void re(int graus){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
-  while(MotorRotationCount(motor_d) < 170){
+  while(MotorRotationCount(motor_d) < graus){
     OnRev(motor_d, -potencia_inicial);
     OnRev(motor_e, -potencia_inicial - 8);
   }
@@ -316,6 +381,7 @@ void re(){
   Wait(100);
 }
 
+// Essa função relaciona os valores obtidos do HT à uma cor
 int le_cor (int lado) {
 
   float sum, m, var; //m Ã© a mÃ©dia aritmÃ©tica, var Ã© a variÃ¢ncia e sum Ã© a soma
@@ -347,6 +413,7 @@ int le_cor (int lado) {
   return BRANCO;
 }
 
+// Essa função impede o robo de cair para os lados
 void Nao_Cai(int lado){
 
   Off(motor_ambos);
@@ -396,12 +463,13 @@ void Nao_Cai(int lado){
 
 }
 
+// Essa função anda o suficiente para o robo se centralizar numa cor
 void centraliza(){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
 
-  while(MotorRotationCount(motor_d)>-140){
+  while(MotorRotationCount(motor_d)>-150){
     OnRev(motor_d, potencia_inicial);
     OnRev(motor_e, potencia_inicial + 10);
   }
@@ -409,6 +477,7 @@ void centraliza(){
 
 }
 
+// Essa função verifica o que fazer logo apos achar uma cor
 void checa_cor(int ht_e){
 
   switch (ht_e){
@@ -447,6 +516,7 @@ void checa_cor(int ht_e){
   }
 }
 
+// Essa função inverte a direção das cores após ele voltar da rampa
 void inverte_cor(){
   char aux;
 
@@ -459,6 +529,52 @@ void inverte_cor(){
   aux = direcao[6];
   direcao[6] = direcao[8];
   direcao[8] = aux;
+}
+
+// Essa função anda pra frente ate se aproximar do boneco e pega-lo
+void pega_boneco(){
+  int i, condicao =0;
+  while(condicao == 0){ // Enquanto o escravo não ve nada, anda pra frente
+    OnRev(motor_d, potencia_inicial);
+    OnRev(motor_e, potencia_inicial + 8);
+    if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){// Se receber mensagem do escravo, muda a condição e sai do loop
+      condicao = 1;
+    }
+  }
+  Off(motor_ambos);
+  SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa pro escravo que o mestre parou
+  Wait(10000);
+}
+
+// Essa função gira ate achar o boneco com o sensor frontal
+void gira_boneco(int lado){
+  int condicao = 0;
+
+  while(condicao == 0){ // Espera o escravo abrir as portas
+      if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
+      condicao = 1;
+      }
+  }
+  condicao = 0;
+
+  if(lado == direita){
+    while(condicao == 0){
+      OnRev(motor_e, potencia_inicial);
+      OnRev(motor_d, -potencia_inicial);
+      if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
+      condicao = 1;
+      }
+    }  
+  }else{
+    while(condicao == 0){
+      OnRev(motor_e, -potencia_inicial);
+      OnRev(motor_d, potencia_inicial);
+      if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
+      condicao = 1;
+      }
+    }  
+  }
+  Off(motor_ambos);
 }
 
 int Andar(){
@@ -556,7 +672,7 @@ int Andar(){
 
 void le_arq(){
 
-    char r;
+  char r;
   unsigned int size;
   unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
 
@@ -648,21 +764,26 @@ task main() {
   SetHTColor2Mode(HT_esquerda, HT_CMD_COLOR2_ACTIVE);
   SetHTColor2Mode(HT_direita, HT_CMD_COLOR2_ACTIVE);
   cria_arq();
-  int rampa = 0, contador = 0;
+  int rampa = 0, contador =0;
 
   BTCheck(BT_CONN);
 
   while(true){
+    SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
     rampa = Andar();
     if(rampa){
       ClearScreen();
       TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
       if(contador == 0){
         contador++;
-        re();
+        re(170);
+        Off(motor_ambos);
+        Wait(200);
         gira180();
+        Off(motor_ambos);
+        Wait(200);
         inverte_cor();
-        SendRemoteNumber(BT_CONN, OUT_MBOX, 1);
+        ResetRotationCount(motor_ambos);
       }else{
         // sobe_rampa();
         // Plaza();
