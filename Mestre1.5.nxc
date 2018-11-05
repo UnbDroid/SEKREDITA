@@ -1,7 +1,7 @@
 #define motor_e OUT_C        // Motor esquerdo
 #define motor_d OUT_A        // Motor direito
 #define motor_ambos OUT_AC
-#define potencia_inicial 50 // PotÃªncia de referÃªncia, usar OnRev para ir para frente
+#define potencia_inicial 45 // PotÃªncia de referÃªncia, usar OnRev para ir para frente
 #define US_chao_d IN_1      // SensorUS voltado para o chÃ£o direito
 #define US_chao_e IN_2      // SensorUS voltado para o chÃ£o esquerdo
 #define HT_direita IN_3   // Sensor de cor da direita
@@ -613,12 +613,21 @@ void inverte_cor(){
 }
 
 // Essa função anda pra frente ate se aproximar do boneco e pega-lo
-void pega_boneco(){
+
+void retorna(int lado){
+
+
+}
+
+void pega_boneco(float distancia){
   int i;
   float correcao = 0;
  // Enquanto o escravo não ve nada, anda pra frente
-   
-    while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR){
+   	
+	ResetRotationCount(motor_ambos);
+	Wait(100);
+
+    while(MotorRotationCount(motor_e) > -(distancia*11)){
 		
       correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
 
@@ -628,12 +637,14 @@ void pega_boneco(){
   
   Off(motor_ambos);
   SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa pro escravo que o mestre parou
-  Wait(5000);
+
+  while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Espera o escravo avisar que pegou o boneco
 }
 
 // Essa função gira ate achar o boneco com o sensor frontal
-void gira_boneco(int lado){
+int gira_boneco(int lado){
   int i = 0;
+  float dist = 255;
 
     while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Espera o escravo abrir as portas
 
@@ -643,21 +654,21 @@ void gira_boneco(int lado){
    
 
   if(lado == direita){
-    while(ReceiveRemoteNumber(IN_MBOX,true, lado) != NO_ERR){
-      OnRev(motor_e, potencia_inicial);
-      OnRev(motor_d, -potencia_inicial);
+    while(ReceiveRemoteNumber(IN_MBOX,true, dist) != NO_ERR){
+      OnRev(motor_e, potencia_inicial-5);
+      OnRev(motor_d, -potencia_inicial+5);
     }
     ResetRotationCount(motor_ambos);
     Wait(100);
   }else{
-    while(ReceiveRemoteNumber(IN_MBOX,true, lado) != NO_ERR){
-      OnRev(motor_e, -potencia_inicial);
-      OnRev(motor_d, potencia_inicial);
+    while(ReceiveRemoteNumber(IN_MBOX,true, dist) != NO_ERR){
+      OnRev(motor_e, -potencia_inicial+5);
+      OnRev(motor_d, potencia_inicial-5);
     }
     ResetRotationCount(motor_ambos);
     Wait(100);
   }
-  Off(motor_ambos);
+  pega_boneco(dist);
 }
 
 int Andar(){
@@ -697,7 +708,7 @@ int Andar(){
         ClearScreen();
         NumOut(0,LCD_LINE1,i);
         gira_boneco(i);
-        pega_boneco();
+        //Retorna(i);
       }
 
       // Nos diz o erro entre as rotações das rodas

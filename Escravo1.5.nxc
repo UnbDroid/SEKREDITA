@@ -24,7 +24,7 @@
 sub BTCheck(int conn){
   if(!BluetoothStatus(conn)==NO_ERR){
     ClearScreen();
-    TextOut(5,LCD_LINE2,"Sem conexao BT");
+    TextOut(5,LCD_LINE2,"Erro");
     Wait(1000);
     Stop(true);
    }
@@ -94,7 +94,7 @@ task main(){
 	SetSensorLowspeed(Ultra_Boneco_Frente);
 	SetSensorLowspeed(Ultra_Boneco_Esquerda);
 
-	float distancia_boneco[2];
+	float distancia_boneco[3];
 	int i=0;
 	float media_e = 255,media_d = 255, media_frontal = 255, leitura_e, leitura_d,leitura_frontal;
 	BTCheck(0);
@@ -135,18 +135,23 @@ task main(){
 	SendResponseNumber(OUT_MBOX, 1); // Fala pro mestre que abriu as portas
 
 	do{
+
 	leitura_frontal = retorna_leitura_mediana(frente);
 	media_frontal = alfa*leitura_frontal + (1-alfa)*media_frontal;
-	
+
 	ClearScreen();
 	NumOut(2,LCD_LINE1,media_frontal);
 	NumOut(2,LCD_LINE2,leitura_frontal);
 	}while(media_frontal > distancia_frontal);
-	SendResponseNumber(OUT_MBOX, 1); // Avisa pro mestre que achou algo no sensor do frente enquanto o robo ta girando
-	
-	while(SensorUS(Ultra_Boneco_Frente) > 10);
 
-	SendResponseNumber(OUT_MBOX, 1); // Avisa que achou o boneco muito perto do sensor 
+	SendResponseNumber(OUT_MBOX, media_frontal); // Avisa pro mestre que achou algo no sensor do frente enquanto o robo ta girando
+	
+
+	// do{
+	// 	media_frontal = (alfa*retorna_leitura_mediana(frente)+ (1-alfa)*media_frontal);
+	// } while (media_frontal > 11);
+
+	// SendResponseNumber(OUT_MBOX, media_frontal); // Avisa que achou o boneco muito perto do sensor
 
 	while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre falar que parou
 
@@ -154,10 +159,11 @@ task main(){
 
 	OnRev(PORTAS, 60);
 	Wait(700);
-	OnFwd(RAMPA, 60);
+	OnFwd(RAMPA,40);
 	Wait(300);
 	Off(PORTAS);
 
+	SendResponseNumber(OUT_MBOX, 1); // Avisa o mestre que o boneco foi capturado
 
 	Wait(10000);
 
