@@ -253,33 +253,61 @@ void sai_da_cor(){
 
 // Essa função grava a última tentativa do robo como 0 na matriz, que representa q ele errou
 void grava_preto(){
-  int contador;
+  int contador, validade = 1;
 
   ultima_direcao = 1;
 
   if(ultimo_lado == VERMELHO){
-    contador = 0;
-    while(direcao[contador] == '0'){
-      contador++;
-      ultima_direcao++;
-    }
-    direcao[contador] = '0';
+  	contador = 0;
+  	while(contador < 3){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
   }else if(ultimo_lado == VERDE){
-    contador = 3;
-    while(direcao[contador] == '0'){
-      contador++;
-      ultima_direcao++;
-    }
-    direcao[contador] = '0';
+  	contador = 3;
+  	while(contador < 6){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
   }else if(ultimo_lado == AZUL){
-    contador = 6;
-    while(direcao[contador] == '0'){
-      contador++;
-      ultima_direcao++;
-    }
-    direcao[contador] = '0';
+  	contador = 6;
+  	while(contador < 9){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
+  }  
+
+  if(validade == 1){
+	  if(ultimo_lado == VERMELHO){
+	    contador = 0;
+	    while(direcao[contador] == '0'){
+	      contador++;
+	      ultima_direcao++;
+	    }
+	    direcao[contador] = '0';
+	  }else if(ultimo_lado == VERDE){
+	    contador = 3;
+	    while(direcao[contador] == '0'){
+	      contador++;
+	      ultima_direcao++;
+	    }
+	    direcao[contador] = '0';
+	  }else if(ultimo_lado == AZUL){
+	    contador = 6;
+	    while(direcao[contador] == '0'){
+	      contador++;
+	      ultima_direcao++;
+	    }
+	    direcao[contador] = '0';
+	  }
+	  reescreve();
   }
-  reescreve();
 }
 
 // Essa função decide pra qual lado girar apos estar centralizado numa cor
