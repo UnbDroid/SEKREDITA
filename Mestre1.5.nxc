@@ -617,7 +617,7 @@ void pega_boneco(){
   int i, condicao =0;
   while(condicao == 0){ // Enquanto o escravo não ve nada, anda pra frente
     OnRev(motor_d, potencia_inicial);
-    OnRev(motor_e, potencia_inicial + 8);
+    OnRev(motor_e, potencia_inicial+8);
     if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){// Se receber mensagem do escravo, muda a condição e sai do loop
       condicao = 1;
     }
@@ -629,31 +629,29 @@ void pega_boneco(){
 
 // Essa função gira ate achar o boneco com o sensor frontal
 void gira_boneco(int lado){
-  int condicao = 0, i = 0;
+  int i = 0;
 
-  while(condicao == 0){ // Espera o escravo abrir as portas
-      if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){
-      condicao = 1;
-      }
-  }
-  condicao = 0;
+    while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Espera o escravo abrir as portas
+
+    re(150);
+    Off(motor_ambos);
+    Wait(200);
+   
 
   if(lado == direita){
-    while(condicao == 0){
+    while(ReceiveRemoteNumber(IN_MBOX,true, lado) != NO_ERR){
       OnRev(motor_e, potencia_inicial);
       OnRev(motor_d, -potencia_inicial);
-      if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
-      condicao = 1;
-      }
     }
+    ResetRotationCount(motor_ambos);
+    Wait(100);
   }else{
-    while(condicao == 0){
+    while(ReceiveRemoteNumber(IN_MBOX,true, lado) != NO_ERR){
       OnRev(motor_e, -potencia_inicial);
       OnRev(motor_d, potencia_inicial);
-      if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
-      condicao = 1;
-      }
     }
+    ResetRotationCount(motor_ambos);
+    Wait(100);
   }
   Off(motor_ambos);
 }
@@ -681,12 +679,12 @@ int Andar(){
     while(1){
 
       // Lê a cor do chão com os HT e checa para ver qual a ação a ser tomada
-      if((le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO)){
-        Off(motor_ambos);
-        Wait(300);
-        entra_na_cor();
-        checa_cor(le_cor(direita));
-      }
+      // if((le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO)){
+      //   Off(motor_ambos);
+      //   Wait(300);
+      //   entra_na_cor();
+      //   checa_cor(le_cor(direita));
+      // }
 
       if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){  //Recebe avisando que o escravo achou boneco nas laterais
         SendRemoteNumber(BT_CONN, OUT_MBOX, 1);	// Avisa que recebeu a mensagem para o escravo
@@ -694,7 +692,6 @@ int Andar(){
         Off(motor_ambos);
         ClearScreen();
         NumOut(0,LCD_LINE1,i);
-        Wait(3000);
         gira_boneco(i);
         pega_boneco();
       }
@@ -738,16 +735,16 @@ int Andar(){
       media_US_e = media_US_e/4;
 
       // Se achar rampa deve retornar 1 para entrar na rotina da rampa
-      if(media_US_d < distancia_da_rampa || media_US_e < distancia_da_rampa){
-       return 1;
-      }
+      // if(media_US_d < distancia_da_rampa || media_US_e < distancia_da_rampa){
+      //  return 1;
+      // }
 
       // Checa para ver se está caindo da pista
-      if(media_US_e > distancia_do_chao){
-        Nao_Cai(esquerda);
-      }else if (media_US_d > distancia_do_chao){
-        Nao_Cai(direita);
-      }
+      // if(media_US_e > distancia_do_chao){
+      //   Nao_Cai(esquerda);
+      // }else if (media_US_d > distancia_do_chao){
+      //   Nao_Cai(direita);
+      // }
     }
     // Não deveria entrar aqui nunca
     return 0;
@@ -850,10 +847,10 @@ task main() {
   cria_arq();
   int rampa = 0, contador =0;
 
-  //BTCheck(BT_CONN);
+  BTCheck(BT_CONN);
+  SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
 
   while(true){
-    //SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
     rampa = Andar();
     // if(rampa){
     //   ClearScreen();
