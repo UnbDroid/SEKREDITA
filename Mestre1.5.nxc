@@ -420,7 +420,7 @@ void gira90(int lado){
     while((MotorRotationCount(motor_d)) < 215){
       correcao =0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
       OnRev(motor_e, potencia_inicial - correcao);
-      OnRev(motor_d, -1*(potencia_inicial + correcao));
+      OnFwd(motor_d, potencia_inicial + correcao);
     }
   }
   ResetRotationCount(motor_ambos);
@@ -614,14 +614,18 @@ void inverte_cor(){
 
 // Essa função anda pra frente ate se aproximar do boneco e pega-lo
 void pega_boneco(){
-  int i, condicao =0;
-  while(condicao == 0){ // Enquanto o escravo não ve nada, anda pra frente
-    OnRev(motor_d, potencia_inicial);
-    OnRev(motor_e, potencia_inicial+8);
-    if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){// Se receber mensagem do escravo, muda a condição e sai do loop
-      condicao = 1;
-    }
-  }
+  int i;
+  float correcao = 0;
+ // Enquanto o escravo não ve nada, anda pra frente
+   
+    while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR){
+		
+      correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+      OnRev(motor_e, potencia_inicial - correcao);
+      OnRev(motor_d, potencia_inicial + correcao);
+    }// Se receber mensagem do escravo, muda a condição e sai do loop
+  
   Off(motor_ambos);
   SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa pro escravo que o mestre parou
   Wait(5000);
