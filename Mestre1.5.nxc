@@ -1,7 +1,7 @@
 #define motor_e OUT_C        // Motor esquerdo
 #define motor_d OUT_A        // Motor direito
 #define motor_ambos OUT_AC
-#define potencia_inicial 65 // PotÃªncia de referÃªncia, usar OnRev para ir para frente
+#define potencia_inicial 50 // PotÃªncia de referÃªncia, usar OnRev para ir para frente
 #define US_chao_d IN_1      // SensorUS voltado para o chÃ£o direito
 #define US_chao_e IN_2      // SensorUS voltado para o chÃ£o esquerdo
 #define HT_direita IN_3   // Sensor de cor da direita
@@ -76,31 +76,31 @@ float pot(float a, int b) { // PotenciaÃ§Ã£o
 void grava_certo(){
   int contador, validade = 1;
 
-  if(ultimo_lado == VERMELHO){
-  	contador = 0;
-  	while(contador < 3){
-  		if(direcao[contador] == '1'){
-  			validade = 0;
-  		}
-  		contador++;
-  	}
-  }else if(ultimo_lado == VERDE){
-  	contador = 3;
-  	while(contador < 6){
-  		if(direcao[contador] == '1'){
-  			validade = 0;
-  		}
-  		contador++;
-  	}
-  }else if(ultimo_lado == AZUL){
-  	contador = 6;
-  	while(contador < 9){
-  		if(direcao[contador] == '1'){
-  			validade = 0;
-  		}
-  		contador++;
-  	}
-  }
+  // if(ultimo_lado == VERMELHO){
+  // 	contador = 0;
+  // 	while(contador < 3){
+  // 		if(direcao[contador] == '1'){
+  // 			validade = 0;
+  // 		}
+  // 		contador++;
+  // 	}
+  // }else if(ultimo_lado == VERDE){
+  // 	contador = 3;
+  // 	while(contador < 6){
+  // 		if(direcao[contador] == '1'){
+  // 			validade = 0;
+  // 		}
+  // 		contador++;
+  // 	}
+  // }else if(ultimo_lado == AZUL){
+  // 	contador = 6;
+  // 	while(contador < 9){
+  // 		if(direcao[contador] == '1'){
+  // 			validade = 0;
+  // 		}
+  // 		contador++;
+  // 	}
+  // }
 
 
   if(validade == 1){
@@ -147,7 +147,7 @@ void entra_na_cor(){
 
   Off(motor_ambos);
 
-  if(le_cor(esquerda) != BRANCO){
+  if(le_cor(esquerda) != BRANCO) {
     while(le_cor(direita) == BRANCO){
       OnRev(motor_d, potencia_inicial);
     }
@@ -238,9 +238,9 @@ void sai_da_cor(){
       Nao_Cai(direita);
     }
 
-    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
-    OnRev(motor_e, potencia_inicial - correcao);
-    OnRev(motor_d, potencia_inicial + correcao);
+    //correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnRev(motor_e, potencia_inicial /*- correcao*/);
+    OnRev(motor_d, potencia_inicial /*+ correcao*/);
 
   }
 
@@ -257,31 +257,31 @@ void grava_preto(){
 
   ultima_direcao = 1;
 
-  if(ultimo_lado == VERMELHO){
-  	contador = 0;
-  	while(contador < 3){
-  		if(direcao[contador] == '1'){
-  			validade = 0;
-  		}
-  		contador++;
-  	}
-  }else if(ultimo_lado == VERDE){
-  	contador = 3;
-  	while(contador < 6){
-  		if(direcao[contador] == '1'){
-  			validade = 0;
-  		}
-  		contador++;
-  	}
-  }else if(ultimo_lado == AZUL){
-  	contador = 6;
-  	while(contador < 9){
-  		if(direcao[contador] == '1'){
-  			validade = 0;
-  		}
-  		contador++;
-  	}
-  }  
+  // if(ultimo_lado == VERMELHO){
+  // 	contador = 0;
+  // 	while(contador < 3){
+  // 		if(direcao[contador] == '1'){
+  // 			validade = 0;
+  // 		}
+  // 		contador++;
+  // 	}
+  // }else if(ultimo_lado == VERDE){
+  // 	contador = 3;
+  // 	while(contador < 6){
+  // 		if(direcao[contador] == '1'){
+  // 			validade = 0;
+  // 		}
+  // 		contador++;
+  // 	}
+  // }else if(ultimo_lado == AZUL){
+  // 	contador = 6;
+  // 	while(contador < 9){
+  // 		if(direcao[contador] == '1'){
+  // 			validade = 0;
+  // 		}
+  // 		contador++;
+  // 	}
+  // }  
 
   if(validade == 1){
 	  if(ultimo_lado == VERMELHO){
@@ -392,19 +392,16 @@ void gira90(int lado){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
-  int correcao;
 
   if(lado == esquerda){
     while((MotorRotationCount(motor_d)) > -215){
-      correcao =kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
-      OnRev(motor_e, -1*(potencia_inicial - correcao));
-      OnRev(motor_d, potencia_inicial + correcao);
+      OnRev(motor_e, -potencia_inicial);
+      OnRev(motor_d, potencia_inicial);
     }
   }else if(lado == direita){
     while((MotorRotationCount(motor_d)) < 215){
-      correcao =kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
-      OnRev(motor_e, potencia_inicial - correcao);
-      OnRev(motor_d, -1*(potencia_inicial + correcao));
+    	OnRev(motor_e,potencia_inicial);
+    	OnRev(motor_d,-potencia_inicial);
     }
   }
   ResetRotationCount(motor_ambos);
@@ -665,8 +662,9 @@ int Andar(){
     while(1){
 
       // Lê a cor do chão com os HT e checa para ver qual a ação a ser tomada
-      if(le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO){
+      if((le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO)){
         Off(motor_ambos);
+        Wait(300);
         entra_na_cor();
         checa_cor(le_cor(direita));
       }
@@ -833,31 +831,31 @@ task main() {
   cria_arq();
   int rampa = 0, contador =0;
 
-  BTCheck(BT_CONN);
+  //BTCheck(BT_CONN);
 
   while(true){
-    SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
+    //SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
     rampa = Andar();
-    if(rampa){
-      ClearScreen();
-      TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
-      if(contador == 0){
-        contador++;
-        re(170);
-        Off(motor_ambos);
-        Wait(200);
-        gira180();
-        Off(motor_ambos);
-        Wait(200);
-        inverte_cor();
-        ResetRotationCount(motor_ambos);
-      }else{
-        // sobe_rampa();
-        // Plaza();
-        // desce_rampa();
-      }
+    // if(rampa){
+    //   ClearScreen();
+    //   TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
+    //   if(contador == 0){
+    //     contador++;
+    //     re(170);
+    //     Off(motor_ambos);
+    //     Wait(200);
+    //     gira180();
+    //     Off(motor_ambos);
+    //     Wait(200);
+    //     inverte_cor();
+    //     ResetRotationCount(motor_ambos);
+    //   }else{
+    //     // sobe_rampa();
+    //     // Plaza();
+    //     // desce_rampa();
+    //   }
 
 
-    }
+    //}
   }
 }
