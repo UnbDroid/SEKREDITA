@@ -296,7 +296,7 @@ void grava_preto(){
   		}
   		contador++;
   	}
-  }  
+  }
 
   if(validade == 1){
 	  if(ultimo_lado == VERMELHO){
@@ -403,20 +403,24 @@ void teste_cor(int cor){
 }
 
 // Essa função gira 90° com argumento do lado
+// Essa função gira 90° com argumento do lado
 void gira90(int lado){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
+  int correcao;
 
   if(lado == esquerda){
     while((MotorRotationCount(motor_d)) > -215){
-      OnRev(motor_e, -potencia_inicial);
-      OnRev(motor_d, potencia_inicial);
+      correcao = 0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+      OnFwd(motor_e, potencia_inicial - correcao);
+      OnRev(motor_d, potencia_inicial + correcao);
     }
   }else if(lado == direita){
     while((MotorRotationCount(motor_d)) < 215){
-    	OnRev(motor_e,potencia_inicial);
-    	OnRev(motor_d,-potencia_inicial);
+      correcao =0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+      OnRev(motor_e, potencia_inicial - correcao);
+      OnRev(motor_d, -1*(potencia_inicial + correcao));
     }
   }
   ResetRotationCount(motor_ambos);
@@ -430,8 +434,8 @@ void gira180(){
   int correcao;
 
   while(MotorRotationCount(motor_d) > -480){
-    correcao =kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
-    OnRev(motor_e, -1*(potencia_inicial - correcao));
+    correcao = 0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+    OnFwd(motor_e, potencia_inicial - correcao);
     OnRev(motor_d, potencia_inicial + correcao);
   }
 
