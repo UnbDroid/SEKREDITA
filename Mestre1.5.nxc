@@ -238,6 +238,7 @@ void sai_da_cor(){
       Nao_Cai(direita);
     }
 
+
     //correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
     OnRev(motor_e, potencia_inicial /*- correcao*/);
     OnRev(motor_d, potencia_inicial /*+ correcao*/);
@@ -245,6 +246,20 @@ void sai_da_cor(){
   }
 
   Off(motor_ambos);
+  Wait(200);
+
+	if(le_cor(esquerda) != BRANCO){
+		while(le_cor(esquerda) != BRANCO){
+			OnRev(motor_e, potencia_inicial);
+		}
+	}else if(le_cor(direita) != BRANCO){
+		while(le_cor(direita) != BRANCO){
+			OnRev(motor_d, potencia_inicial);
+		}
+	}
+
+  Off(motor_ambos);
+  Wait(200);
 
   ResetRotationCount(motor_ambos);
   Wait(100);
