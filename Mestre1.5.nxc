@@ -558,10 +558,10 @@ void pega_boneco(){
 
 // Essa função gira ate achar o boneco com o sensor frontal
 void gira_boneco(int lado){
-  int condicao = 0;
+  int condicao = 0, i = 0;
 
   while(condicao == 0){ // Espera o escravo abrir as portas
-      if(ReceiveRemoteNumber(IN_MBOX,true, lado) == NO_ERR){
+      if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){
       condicao = 1;
       }
   }
@@ -616,14 +616,15 @@ int Andar(){
         checa_cor(le_cor(direita));
       }
 
-      if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){
-        SendRemoteNumber(BT_CONN, OUT_MBOX, 1);
+      if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){  //Recebe avisando que o escravo achou boneco nas laterais
+        SendRemoteNumber(BT_CONN, OUT_MBOX, 1);	// Avisa que recebeu a mensagem para o escravo
         PlayTone(400, 400);
         Off(motor_ambos);
         ClearScreen();
         NumOut(0,LCD_LINE1,i);
         Wait(3000);
         gira_boneco(i);
+        pega_boneco();
       }
 
       // Nos diz o erro entre as rotações das rodas
