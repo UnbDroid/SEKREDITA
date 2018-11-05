@@ -188,7 +188,7 @@ void sai_da_cor(){
   Off(motor_ambos);
   Wait(200);
 
-  int i;
+  int i, correcao;
 
   while(le_cor(direita) != BRANCO || le_cor(esquerda) != BRANCO){
     leitura_US_d[contador%4] = SensorUS(US_chao_d);
@@ -337,6 +337,7 @@ void gira90(int lado){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
+  int correcao;
 
   if(lado == esquerda){
     while((MotorRotationCount(motor_d)) > -215){
@@ -359,6 +360,7 @@ void gira90(int lado){
 void gira180(){
   ResetRotationCount(motor_ambos);
   Wait(100);
+  int correcao;
 
   while(MotorRotationCount(motor_d) > -480){
     correcao =kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
@@ -376,6 +378,7 @@ void re(int graus){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
+  int correcao;
   while(MotorRotationCount(motor_d) < graus){
     correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
     OnFwd(motor_e, potencia_inicial + correcao);
@@ -473,7 +476,7 @@ void centraliza(){
 
   ResetRotationCount(motor_ambos);
   Wait(100);
-
+  int correcao;
   // Anda reto alguns centímetros mantendo um controle proporcional
   while(MotorRotationCount(motor_d)>-150){
     correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
@@ -601,7 +604,7 @@ int Andar(){
     float ht_e, ht_d;
 
     // VariÃ¡veis utilizadas nos calculos
-    float rotacao_e, rotacao_d, erro, correcao, derivativo, integrativo = 0, ultimo_erro = 0;
+    float rotacao_e, rotacao_d, erro, correcao, derivativo, integral = 0, ultimo_erro = 0;
     float potencia_e, potencia_d;
 
     while(1){
@@ -617,6 +620,9 @@ int Andar(){
         SendRemoteNumber(BT_CONN, OUT_MBOX, 1);
         PlayTone(400, 400);
         Off(motor_ambos);
+        ClearScreen();
+        NumOut(0,LCD_LINE1,i);
+        Wait(3000);
         gira_boneco(i);
       }
 
@@ -626,10 +632,10 @@ int Andar(){
       integral += erro;
 
       // Limita a ação da soma integral do erro
-      if(integrativo > 15){
-        integrativo = 15;
-      }else if(integrativo < -15){
-        integrativo = -15;
+      if(integral > 15){
+        integral = 15;
+      }else if(integral < -15){
+        integral = -15;
       }
 
       // Parte derivativa
@@ -637,7 +643,7 @@ int Andar(){
       ultimo_erro = erro;
 
       // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
-      correcao = (kp*erro) + (kd*derivativo) + (ki*integrativo);
+      correcao = (kp*erro) + (kd*derivativo) + (ki*integral);
 
       // Calcula a potência de correção em torno da potência inicial desejada
       potencia_e = potencia_inicial - correcao;

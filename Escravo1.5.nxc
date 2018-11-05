@@ -19,14 +19,14 @@
 #define VERMELHO 5
 #define BRANCO   6
 #define FORA     7
-
+#define alfa 0.8
 sub BTCheck(int conn){
   if(!BluetoothStatus(conn)==NO_ERR){
     ClearScreen();
     TextOut(5,LCD_LINE2,"Erro");
     Wait(1000);
     Stop(true);
-   }''
+   }
 }
 
 int retorna_leitura_mediana(int lado){
