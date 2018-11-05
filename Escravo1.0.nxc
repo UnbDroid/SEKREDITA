@@ -8,7 +8,7 @@
 #define PORTA_D OUT_C
 #define RAMPA OUT_B
 #define PORTAS OUT_AC
-#define Distancia_do_Boneco 15
+#define Distancia_do_Boneco 20
 #define esquerda 1
 #define frente 2
 #define direita 3
@@ -26,7 +26,7 @@ sub BTCheck(int conn){
     TextOut(5,LCD_LINE2,"Erro");
     Wait(1000);
     Stop(true);
-   }
+   }''
 }
 
 void pega_boneco(){
@@ -58,25 +58,70 @@ task main(){
 	SetSensorLowspeed(Ultra_Boneco_Frente);
 	SetSensorLowspeed(Ultra_Boneco_Esquerda);
 
+	unsigned float USdir, USesq;
+
 	int i=0;
 	BTCheck(0);
-	while(1){
+	
 
-		while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX);
+	while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre ativar o escravo
 
 
-		while(SensorUS(Ultra_Boneco_Direita) > Distancia_do_Boneco && SensorUS(Ultra_Boneco_Esquerda) > Distancia_do_Boneco);
+	do {
+		USdir = SensorUS(Ultra_Boneco_Direita);
+		USesq = SensorUS(Ultra_Boneco_Esquerda);
 
-		if(SensorUS(Ultra_Boneco_Direita) < Distancia_do_Boneco){
-			while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX){
-				SendResponseNumber(OUT_MBOX, direita);
-			}
-		}else{
-			while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX){
-				SendResponseNumber(OUT_MBOX, esquerda);
-			}
-		}
-		Stop(1);
-		//pega_boneco();
+	}	while(USdir > Distancia_do_Boneco && USesq > Distancia_do_Boneco);// PROCURA BONECO LATERAL
+
+
+	if(USdir < Distancia_do_Boneco){
+		SendResponseNumber(OUT_MBOX, direita);
+	}else if (USesq < Distancia_do_Boneco) {
+		SendResponseNumber(OUT_MBOX, esquerda);
 	}
+
+	while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Recebe avisando que esvaziou a caixa
+
+	while(MotorRotationCount(PORTA_D) < 80){
+		OnFwd(PORTAS, 50);
+	}
+	Off(PORTAS);
+	
+	OnRev(RAMPA, 20);
+	Wait(200);
+
+	Off(RAMPA);
+
+	SendResponseNumber(OUT_MBOX, 1); // Fala pro mestre que abriu as portas
+
+
+	while(SensorUS(Ultra_Boneco_Frente) > 30){
+		ClearScreen();
+		NumOut(0,LCD_LINE1,SensorUS(Ultra_Boneco_Frente));
+	}
+
+	SendResponseNumber(OUT_MBOX, 1);
+
+	while(SensorUS(Ultra_Boneco_Frente) > 10);
+
+	SendResponseNumber(OUT_MBOX, 1);
+
+	while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre falar que parou
+
+
+
+	while(MotorRotationCount(PORTA_D) > 0){
+		OnRev(PORTAS, 50);
+	}
+	Off(PORTAS);
+	OnFwd(RAMPA, 50);
+
+
+	Wait(10000);
+
+
+
+	Stop(1);
+	//pega_boneco();
+	
 }
