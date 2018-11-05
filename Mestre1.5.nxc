@@ -550,7 +550,7 @@ void pega_boneco(){
   }
   Off(motor_ambos);
   SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa pro escravo que o mestre parou
-  Wait(10000);
+  Wait(5000);
 }
 
 // Essa função gira ate achar o boneco com o sensor frontal
@@ -617,8 +617,7 @@ int Andar(){
         SendRemoteNumber(BT_CONN, OUT_MBOX, 1);
         PlayTone(400, 400);
         Off(motor_ambos);
-        Wait(2000);
-        while(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR);
+        gira_boneco(i);
       }
 
       // Nos diz o erro entre as rotações das rodas
@@ -713,6 +712,7 @@ void le_arq(){
 
 
 }
+
 void cria_arq() {
   unsigned int rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
   unsigned int esc;

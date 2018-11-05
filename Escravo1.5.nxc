@@ -29,6 +29,39 @@ sub BTCheck(int conn){
    }''
 }
 
+int retorna_leitura_mediana(int lado){
+
+	float leitura[5], max = 0;
+	int i,j,indice;
+
+	// Pega as 5 leituras
+	for(i=0;i<=4;i++){
+		if(lado == esquerda){
+			leitura[i] = SensorUS(Ultra_Boneco_Esquerda);
+		}else if(lado == direita){
+			leitura[i] = SensorUS(Ultra_Boneco_Direita);
+		}
+	}
+
+	// Ordenação do vetor de leituras
+	for(i=0;i<=4;i++){
+		for(j=0;j<=4-i;j++){
+			if(leitura[j] > max){
+				indice = j;
+				max = leitura[j];
+			}
+		}
+		if(indice != 4-i){
+			max = leitura[indice];
+			leitura[indice] = leitura[4-i];
+			leitura[4-i] = max;
+		}
+		max = 0;
+	}
+
+	return leitura[2];
+}
+
 void pega_boneco(){
 	int i=0;
 	ClearScreen();
@@ -37,7 +70,7 @@ void pega_boneco(){
 
 	while(SensorUS(Ultra_Boneco_Frente)>12){
 		ClearScreen();
-		TextOut(10,LCD_LINE1, "Indo para frente");	
+		TextOut(10,LCD_LINE1, "Indo para frente");
 	}
 
 	SendResponseNumber(OUT_MBOX, 2);
@@ -58,25 +91,27 @@ task main(){
 	SetSensorLowspeed(Ultra_Boneco_Frente);
 	SetSensorLowspeed(Ultra_Boneco_Esquerda);
 
-	unsigned float USdir, USesq;
-
-	int i=0;
+  int i=0;
+  float media_e = 255,media_d = 255, leitura_e, leitura_d;
 	BTCheck(0);
-	
 
 	while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre ativar o escravo
 
 
 	do {
-		USdir = SensorUS(Ultra_Boneco_Direita);
-		USesq = SensorUS(Ultra_Boneco_Esquerda);
+    // Pega as leituras
+    leitura_e = retorna_leitura_mediana(esquerda);
+    leitura_d = retorna_leitura_mediana(direita);
 
-	}	while(USdir > Distancia_do_Boneco && USesq > Distancia_do_Boneco);// PROCURA BONECO LATERAL
+    // Calcula a média dos valores lidos
+    media_e = alfa*leitura_e + (1-alfa)*media_e;
+    media_d = alfa*leitura_d + (1-alfa)*media_d;
+	}	while(media_e > Distancia_do_Boneco && media_d > Distancia_do_Boneco);// PROCURA BONECO LATERAL
 
 
-	if(USdir < Distancia_do_Boneco){
+	if(media_e < Distancia_do_Boneco){
 		SendResponseNumber(OUT_MBOX, direita);
-	}else if (USesq < Distancia_do_Boneco) {
+	}else if (media_d < Distancia_do_Boneco) {
 		SendResponseNumber(OUT_MBOX, esquerda);
 	}
 
@@ -86,14 +121,13 @@ task main(){
 		OnFwd(PORTAS, 50);
 	}
 	Off(PORTAS);
-	
+
 	OnRev(RAMPA, 20);
 	Wait(200);
 
 	Off(RAMPA);
 
 	SendResponseNumber(OUT_MBOX, 1); // Fala pro mestre que abriu as portas
-
 
 	while(SensorUS(Ultra_Boneco_Frente) > 30){
 		ClearScreen();
@@ -123,5 +157,5 @@ task main(){
 
 	Stop(1);
 	//pega_boneco();
-	
+
 }
