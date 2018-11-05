@@ -76,31 +76,31 @@ float pot(float a, int b) { // PotenciaÃ§Ã£o
 void grava_certo(){
   int contador, validade = 1;
 
-  // if(ultimo_lado == VERMELHO){
-  // 	contador = 0;
-  // 	while(contador < 3){
-  // 		if(direcao[contador] == '1'){
-  // 			validade = 0;
-  // 		}
-  // 		contador++;
-  // 	}
-  // }else if(ultimo_lado == VERDE){
-  // 	contador = 3;
-  // 	while(contador < 6){
-  // 		if(direcao[contador] == '1'){
-  // 			validade = 0;
-  // 		}
-  // 		contador++;
-  // 	}
-  // }else if(ultimo_lado == AZUL){
-  // 	contador = 6;
-  // 	while(contador < 9){
-  // 		if(direcao[contador] == '1'){
-  // 			validade = 0;
-  // 		}
-  // 		contador++;
-  // 	}
-  // }
+  if(ultimo_lado == VERMELHO){
+  	contador = 0;
+  	while(contador < 3){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
+  }else if(ultimo_lado == VERDE){
+  	contador = 3;
+  	while(contador < 6){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
+  }else if(ultimo_lado == AZUL){
+  	contador = 6;
+  	while(contador < 9){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
+  }
 
 
   if(validade == 1){
@@ -272,31 +272,31 @@ void grava_preto(){
 
   ultima_direcao = 1;
 
-  // if(ultimo_lado == VERMELHO){
-  // 	contador = 0;
-  // 	while(contador < 3){
-  // 		if(direcao[contador] == '1'){
-  // 			validade = 0;
-  // 		}
-  // 		contador++;
-  // 	}
-  // }else if(ultimo_lado == VERDE){
-  // 	contador = 3;
-  // 	while(contador < 6){
-  // 		if(direcao[contador] == '1'){
-  // 			validade = 0;
-  // 		}
-  // 		contador++;
-  // 	}
-  // }else if(ultimo_lado == AZUL){
-  // 	contador = 6;
-  // 	while(contador < 9){
-  // 		if(direcao[contador] == '1'){
-  // 			validade = 0;
-  // 		}
-  // 		contador++;
-  // 	}
-  // }  
+  if(ultimo_lado == VERMELHO){
+  	contador = 0;
+  	while(contador < 3){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
+  }else if(ultimo_lado == VERDE){
+  	contador = 3;
+  	while(contador < 6){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
+  }else if(ultimo_lado == AZUL){
+  	contador = 6;
+  	while(contador < 9){
+  		if(direcao[contador] == '1'){
+  			validade = 0;
+  		}
+  		contador++;
+  	}
+  }  
 
   if(validade == 1){
 	  if(ultimo_lado == VERMELHO){
