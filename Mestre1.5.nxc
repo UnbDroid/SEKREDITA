@@ -544,23 +544,51 @@ void Nao_Cai(int lado){
 }
 
 // Essa função anda o suficiente para o robô se centralizar numa cor
-void centraliza(){
+int centraliza(int cor){
+	  ResetRotationCount(motor_ambos);
+	  Wait(100);
+	  int correcao;
 
-  ResetRotationCount(motor_ambos);
-  Wait(100);
-  int correcao;
-  // Anda reto alguns centímetros mantendo um controle proporcional
-  while(MotorRotationCount(motor_d)>-170){
-    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
-    OnRev(motor_e, potencia_inicial - correcao);
-    OnRev(motor_d, potencia_inicial + correcao);
-  }
-  Off(motor_ambos);
+	if(1) {
+	  while(MotorRotationCount(motor_d)>-130){
+	    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+	    OnRev(motor_e, potencia_inicial - correcao);
+	    OnRev(motor_d, potencia_inicial + correcao);
+
+	  }
+	  Off(motor_ambos);
+	  Wait(2500);
+
+	   if(le_cor(esquerda) == cor) {
+
+		  	  while(MotorRotationCount(motor_d)>-40){
+		    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+		    OnRev(motor_e, potencia_inicial - correcao);
+		    OnRev(motor_d, potencia_inicial + correcao);
+
+		  }
+		  Off(motor_ambos);
+
+		}else {
+			return TRUE;
+		}
+
+	} else {
+	  // Anda reto alguns centímetros mantendo um controle proporcional
+	  while(MotorRotationCount(motor_d)>-170){
+	    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+	    OnRev(motor_e, potencia_inicial - correcao);
+	    OnRev(motor_d, potencia_inicial + correcao);
+	  }
+	  Off(motor_ambos);
+	}
+
+	return FALSE;
 
 }
 
 // Essa função verifica o que fazer logo apos achar uma cor
-void checa_cor(int ht_e){
+int checa_cor(int ht_e){
 
   switch (ht_e){
 
@@ -574,21 +602,27 @@ void checa_cor(int ht_e){
       sai_da_cor();
       break;
     case VERMELHO:
-      centraliza();
+      if(centraliza(ht_e)){
+      	return TRUE;
+      }
       Off(motor_ambos);
       Wait(600);
       teste_cor(VERMELHO);
       sai_da_cor();
       break;
     case VERDE:
-      centraliza();
+      if(centraliza(ht_e)){
+      	return TRUE;
+      }
       Off(motor_ambos);
       Wait(600);
       teste_cor(VERDE);
       sai_da_cor();
       break;
     case AZUL:
-      centraliza();
+      if(centraliza(ht_e)){
+      	return TRUE;
+      }
       Off(motor_ambos);
       Wait(600);
       teste_cor(AZUL);
@@ -596,6 +630,7 @@ void checa_cor(int ht_e){
       break;
 
   }
+  return FALSE;
 }
 
 // Essa função inverte a direção das cores após ele voltar da rampa
@@ -635,7 +670,7 @@ void pega_boneco(float distancia){
 
   while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Espera o escravo avisar que pegou o boneco
 
-  re(distancia*9);
+  re(distancia*8);
 }
 
 // Essa função gira ate achar o boneco com o sensor frontal
@@ -695,7 +730,9 @@ int Andar(){
         Off(motor_ambos);
         Wait(300);
         entra_na_cor();
-        checa_cor(le_cor(direita));
+        if(checa_cor(le_cor(direita))){
+        	return TRUE;
+        }
       }
 
       if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){  //Recebe avisando que o escravo achou boneco nas laterais
@@ -745,11 +782,6 @@ int Andar(){
       }
       media_US_d = media_US_d/4;
       media_US_e = media_US_e/4;
-
-      // Se achar rampa deve retornar 1 para entrar na rotina da rampa
-      if((media_US_d < distancia_da_rampa || media_US_e < distancia_da_rampa)&& contador>3){
-       return 1;
-      }
 
       ClearScreen();
       NumOut(1,LCD_LINE1,media_US_e);
@@ -868,9 +900,14 @@ task main() {
   
   while(true){
     rampa = Andar();
-  //   if(rampa){
-  //     ClearScreen();
-  //     TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
+     if(rampa){
+       ClearScreen();
+       TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
+       Off(motor_ambos);
+       rampa = FALSE;
+       Wait(10000);
+   }
+
   //     if(contador == 0){
   //       contador++;
   //       re(170);
