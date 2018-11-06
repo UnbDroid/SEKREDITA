@@ -1,12 +1,12 @@
 #define motor_e OUT_C        // Motor esquerdo
 #define motor_d OUT_A        // Motor direito
 #define motor_ambos OUT_AC
-#define potencia_inicial 45 // PotÃªncia de referÃªncia, usar OnRev para ir para frente
+#define potencia_inicial 55 // PotÃªncia de referÃªncia, usar OnRev para ir para frente
 #define US_chao_d IN_1      // SensorUS voltado para o chÃ£o direito
 #define US_chao_e IN_2      // SensorUS voltado para o chÃ£o esquerdo
 #define HT_direita IN_3   // Sensor de cor da direita
 #define HT_esquerda IN_4  // Sensor de cor da esquerda
-#define kp 0.5
+#define kp 0.3
 #define ki 0.1
 #define kd 1.0
 #define PRETO    1
@@ -19,7 +19,7 @@
 #define esquerda 1
 #define frente 2
 #define direita 3
-#define distancia_do_chao 10
+#define distancia_do_chao 10.5
 #define distancia_da_rampa 7.5
 #define FILE_NAME "arq.dat"
 #define FILE_SIZE 11
@@ -27,10 +27,10 @@
 #define OUT_MBOX 5
 #define IN_MBOX 1
 
-float leitura_US_e[3] ={9,9,9,9}, leitura_US_d[3] ={9,9,9,9};
+float leitura_US_e[3] ={7.5,7.5,7.5,7.5}, leitura_US_d[3] ={7.5,7.5,7.5,7.5};
 // VariÃ¡veis do filtro de US
 int contador = 0;
-float media_US_d,media_US_e;
+float media_US_d =7.5,media_US_e=7.5;
 
 byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
 int tentativa = 0, ultima_direcao = 0, ultimo_lado = PRETO, cor_1=0, cor_2=0, cor_3=0;
@@ -138,7 +138,7 @@ void grava_certo(){
 	    direcao[contador - 3] = '0';
 	    direcao[contador - 6] = '0';
 	  }
-	  reescreve();
+	 // reescreve();
   }
 }
 
@@ -148,11 +148,11 @@ void entra_na_cor(){
   Off(motor_ambos);
 
   if(le_cor(esquerda) != BRANCO) {
-    while(le_cor(direita) == BRANCO){
+    while(le_cor(direita) == BRANCO && le_cor(esquerda) != BRANCO){
       OnRev(motor_d, potencia_inicial);
     }
   }else if(le_cor(direita) != BRANCO){
-    while(le_cor(esquerda) == BRANCO){
+    while(le_cor(esquerda) == BRANCO && le_cor(direita) != BRANCO){
       OnRev(motor_e, potencia_inicial);
     }
   }
@@ -215,6 +215,9 @@ void sai_da_cor(){
   Off(motor_ambos);
   Wait(200);
 
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
   int i, correcao;
 
   while(le_cor(direita) != BRANCO || le_cor(esquerda) != BRANCO){
@@ -239,9 +242,9 @@ void sai_da_cor(){
     }
 
 
-    //correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
-    OnRev(motor_e, potencia_inicial /*- correcao*/);
-    OnRev(motor_d, potencia_inicial /*+ correcao*/);
+    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnRev(motor_e, potencia_inicial - correcao);
+    OnRev(motor_d, potencia_inicial + correcao);
 
   }
 
@@ -321,7 +324,7 @@ void grava_preto(){
 	    }
 	    direcao[contador] = '0';
 	  }
-	  reescreve();
+	 // reescreve();
   }
 }
 
@@ -403,7 +406,6 @@ void teste_cor(int cor){
 }
 
 // Essa função gira 90° com argumento do lado
-// Essa função gira 90° com argumento do lado
 void gira90(int lado){
 
   ResetRotationCount(motor_ambos);
@@ -411,13 +413,13 @@ void gira90(int lado){
   int correcao;
 
   if(lado == esquerda){
-    while((MotorRotationCount(motor_d)) > -215){
+    while((MotorRotationCount(motor_d)) > -205){
       correcao = 0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
       OnFwd(motor_e, potencia_inicial - correcao);
       OnRev(motor_d, potencia_inicial + correcao);
     }
   }else if(lado == direita){
-    while((MotorRotationCount(motor_d)) < 215){
+    while((MotorRotationCount(motor_d)) < 205){
       correcao =0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
       OnRev(motor_e, potencia_inicial - correcao);
       OnFwd(motor_d, potencia_inicial + correcao);
@@ -433,10 +435,9 @@ void gira180(){
   Wait(100);
   int correcao;
 
-  while(MotorRotationCount(motor_d) > -480){
-    correcao = 0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
-    OnFwd(motor_e, potencia_inicial - correcao);
-    OnRev(motor_d, potencia_inicial + correcao);
+  while(MotorRotationCount(motor_d) > -420){
+    OnFwd(motor_e, potencia_inicial);
+    OnRev(motor_d, potencia_inicial);
   }
 
   ResetRotationCount(motor_ambos);
@@ -549,7 +550,7 @@ void centraliza(){
   Wait(100);
   int correcao;
   // Anda reto alguns centímetros mantendo um controle proporcional
-  while(MotorRotationCount(motor_d)>-150){
+  while(MotorRotationCount(motor_d)>-170){
     correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
     OnRev(motor_e, potencia_inicial - correcao);
     OnRev(motor_d, potencia_inicial + correcao);
@@ -613,32 +614,28 @@ void inverte_cor(){
 }
 
 // Essa função anda pra frente ate se aproximar do boneco e pega-lo
-
-void retorna(int lado){
-
-
-}
-
 void pega_boneco(float distancia){
   int i;
   float correcao = 0;
- // Enquanto o escravo não ve nada, anda pra frente
+ 
    	
 	ResetRotationCount(motor_ambos);
 	Wait(100);
 
-    while(MotorRotationCount(motor_e) > -(distancia*11)){
+    while(MotorRotationCount(motor_e) > -(distancia*11)){ // Enquanto o escravo não ve nada, anda pra frente
 		
       correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
 
       OnRev(motor_e, potencia_inicial - correcao);
       OnRev(motor_d, potencia_inicial + correcao);
-    }// Se receber mensagem do escravo, muda a condição e sai do loop
+    } // Se receber mensagem do escravo, muda a condição e sai do loop
   
   Off(motor_ambos);
   SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa pro escravo que o mestre parou
 
   while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Espera o escravo avisar que pegou o boneco
+
+  re(distancia*9);
 }
 
 // Essa função gira ate achar o boneco com o sensor frontal
@@ -694,12 +691,12 @@ int Andar(){
     while(1){
 
       // Lê a cor do chão com os HT e checa para ver qual a ação a ser tomada
-      // if((le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO)){
-      //   Off(motor_ambos);
-      //   Wait(300);
-      //   entra_na_cor();
-      //   checa_cor(le_cor(direita));
-      // }
+      if((le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO)){
+        Off(motor_ambos);
+        Wait(300);
+        entra_na_cor();
+        checa_cor(le_cor(direita));
+      }
 
       if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){  //Recebe avisando que o escravo achou boneco nas laterais
         SendRemoteNumber(BT_CONN, OUT_MBOX, 1);	// Avisa que recebeu a mensagem para o escravo
@@ -708,7 +705,7 @@ int Andar(){
         ClearScreen();
         NumOut(0,LCD_LINE1,i);
         gira_boneco(i);
-        //Retorna(i);
+        gira90(i);
       }
 
       // Nos diz o erro entre as rotações das rodas
@@ -750,16 +747,20 @@ int Andar(){
       media_US_e = media_US_e/4;
 
       // Se achar rampa deve retornar 1 para entrar na rotina da rampa
-      // if(media_US_d < distancia_da_rampa || media_US_e < distancia_da_rampa){
-      //  return 1;
-      // }
+      if((media_US_d < distancia_da_rampa || media_US_e < distancia_da_rampa)&& contador>3){
+       return 1;
+      }
+
+      ClearScreen();
+      NumOut(1,LCD_LINE1,media_US_e);
+      NumOut(1,LCD_LINE2,media_US_d);
 
       // Checa para ver se está caindo da pista
-      // if(media_US_e > distancia_do_chao){
-      //   Nao_Cai(esquerda);
-      // }else if (media_US_d > distancia_do_chao){
-      //   Nao_Cai(direita);
-      // }
+      if(media_US_e > distancia_do_chao){
+        Nao_Cai(esquerda);
+      }else if (media_US_d > distancia_do_chao){
+        Nao_Cai(direita);
+      }
     }
     // Não deveria entrar aqui nunca
     return 0;
@@ -864,29 +865,30 @@ task main() {
 
   BTCheck(BT_CONN);
   SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
-
+  
   while(true){
     rampa = Andar();
-    // if(rampa){
-    //   ClearScreen();
-    //   TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
-    //   if(contador == 0){
-    //     contador++;
-    //     re(170);
-    //     Off(motor_ambos);
-    //     Wait(200);
-    //     gira180();
-    //     Off(motor_ambos);
-    //     Wait(200);
-    //     inverte_cor();
-    //     ResetRotationCount(motor_ambos);
-    //   }else{
-    //     // sobe_rampa();
-    //     // Plaza();
-    //     // desce_rampa();
-    //   }
+  //   if(rampa){
+  //     ClearScreen();
+  //     TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
+  //     if(contador == 0){
+  //       contador++;
+  //       re(170);
+  //       Off(motor_ambos);
+  //       Wait(200);
+  //       gira180();
+  //       Off(motor_ambos);
+  //       Wait(200);
+  //       inverte_cor();
+  //       ResetRotationCount(motor_ambos);
+  //       Wait(200);
+  //     }else{
+  //       // sobe_rampa();
+  //       // Plaza();
+  //       // desce_rampa();
+  //     }
 
 
-    //}
-  }
+  //   }
+   }
 }

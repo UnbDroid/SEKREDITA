@@ -165,7 +165,7 @@ task main(){
 
 	SendResponseNumber(OUT_MBOX, 1); // Avisa o mestre que o boneco foi capturado
 
-	Wait(10000);
+	Wait(50000);
 
 
 
