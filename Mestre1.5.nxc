@@ -6,9 +6,9 @@
 #define US_chao_e IN_2      // SensorUS voltado para o chÃ£o esquerdo
 #define HT_direita IN_3   // Sensor de cor da direita
 #define HT_esquerda IN_4  // Sensor de cor da esquerda
-#define kp 0.3
-#define ki 0.1
-#define kd 1.0
+#define kp 0.2
+#define ki 0.08
+#define kd 0.1
 #define PRETO    1
 #define AZUL     2
 #define VERDE    3
@@ -390,7 +390,7 @@ void teste_cor(int cor){
           tentativa = 0;
           if(ultima_direcao == frente){
             gira90(esquerda);
-          }else if(direcao[1] != '0'){
+          }else if(direcao[7] != '0'){
             gira90(esquerda);
           }
         }
@@ -407,13 +407,13 @@ void gira90(int lado){
   int correcao;
 
   if(lado == esquerda){
-    while((MotorRotationCount(motor_d)) > -190){
+    while((MotorRotationCount(motor_d)) > -205){
       correcao = 0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
       OnFwd(motor_e, potencia_inicial - correcao);
       OnRev(motor_d, potencia_inicial + correcao);
     }
   }else if(lado == direita){
-    while((MotorRotationCount(motor_d)) < 190){
+    while((MotorRotationCount(motor_d)) < 235){
       correcao =0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
       OnRev(motor_e, potencia_inicial - correcao);
       OnFwd(motor_d, potencia_inicial + correcao);
@@ -429,7 +429,7 @@ void gira180(){
   Wait(100);
   int correcao;
 
-  while(MotorRotationCount(motor_d) > -440){
+  while(MotorRotationCount(motor_d) > -420){
     OnFwd(motor_e, potencia_inicial);
     OnRev(motor_d, potencia_inicial);
   }
@@ -511,7 +511,7 @@ void Nao_Cai(int lado){
     ResetRotationCount(motor_ambos);
     Wait(100);
     // Para voltar para a pista Ã© preciso girar a roda esquerda para frente e a direita para trÃ¡s
-    while(MotorRotationCount(motor_d) < 50){
+    while(MotorRotationCount(motor_d) < 40){
       OnFwd(motor_e, potencia_inicial);
       OnFwd(motor_d, potencia_inicial);
      }
@@ -556,7 +556,7 @@ int centraliza(int cor){
 
 	  cor_nova  = le_cor(esquerda);
 
-	   	if(cor_nova == cor) {
+	   	if(cor_nova == cor || cor_nova == BRANCO) {
 
 			while(MotorRotationCount(motor_d)>-175){
 			    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
@@ -727,6 +727,9 @@ int Andar(){
         ClearScreen();
         NumOut(0,LCD_LINE1,i);
         gira_boneco(i);
+        Off(motor_ambos);
+        Wait(200);
+        inverte_cor();
         gira90(i);
       }
 
@@ -775,8 +778,30 @@ int Andar(){
       // Checa para ver se está caindo da pista
       if(media_US_e > distancia_do_chao){
         Nao_Cai(esquerda);
+        ht_e = le_cor(esquerda);
+        ht_d = le_cor(direita);
+        if(ht_d != BRANCO || ht_e != BRANCO){
+          while(ht_d != BRANCO || ht_e != BRANCO){
+            OnRev(motor_ambos, 40);
+            ht_e = le_cor(esquerda);
+            ht_d = le_cor(direita);
+          }
+          Off(motor_ambos);
+          ResetRotationCount(motor_ambos);
+        }
       }else if (media_US_d > distancia_do_chao){
         Nao_Cai(direita);
+        ht_e = le_cor(esquerda);
+        ht_d = le_cor(direita);
+        if(ht_d != BRANCO || ht_e != BRANCO){
+          while(ht_d != BRANCO || ht_e != BRANCO){
+            OnRev(motor_ambos, 20);
+            ht_e = le_cor(esquerda);
+            ht_d = le_cor(direita);
+          }
+          Off(motor_ambos);
+          ResetRotationCount(motor_ambos);
+        }
       }
     }
     // Não deveria entrar aqui nunca
@@ -869,6 +894,87 @@ void cria_arq() {
 
 }
 
+void Plaza(){
+  int correcao = 0, cor_e, cor_d;
+
+     ResetRotationCount(motor_ambos);
+     Wait(100);
+
+  cor_e = le_cor(esquerda);
+  cor_d = le_cor(direita);
+  
+  while(cor_e != BRANCO && cor_d != BRANCO){
+    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+    OnRev(motor_e, 20 - correcao);
+    OnRev(motor_d, 20 + correcao);
+    cor_e = le_cor(esquerda);
+    cor_d = le_cor(direita);
+
+  }
+  Off(motor_ambos);
+
+  if(cor_d == BRANCO && cor_e != BRANCO){
+    while(le_cor(esquerda) != BRANCO){
+      OnRev(motor_e, 35);
+    }
+  }else if(cor_e == BRANCO && cor_d != BRANCO){
+    while(le_cor(direita) != BRANCO){
+      OnRev(motor_d, 35);
+    }
+  }
+
+  Off(motor_ambos);
+
+  while(le_cor(esquerda) != PRETO && le_cor(direita) != PRETO){
+    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+    OnRev(motor_e, 20 - correcao);
+    OnRev(motor_d, 20 + correcao);
+    cor_e = le_cor(esquerda);
+    cor_d = le_cor(direita);
+  }
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  while(MotorRotationCount(motor_d) > -60){
+    OnRev(motor_ambos, potencia_inicial);
+  }
+
+  Off(motor_ambos);
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+  while(MotorRotationCount(motor_d) > -50){
+    OnRev(motor_ambos, 80);
+  }
+
+  while(MotorRotationCount(motor_d) < 0){
+    OnFwd(motor_ambos, 80);
+  }
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  gira180();
+  inverte_cor();
+
+  while(le_cor(esquerda) == BRANCO && le_cor(direita) == BRANCO){
+    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+    OnRev(motor_e, 20 - correcao);
+    OnRev(motor_d, 20 + correcao);
+    cor_e = le_cor(esquerda);
+    cor_d = le_cor(direita);
+  }
+
+  while(MotorRotationCount(motor_e) > -300){
+    OnRev(motor_ambos, potencia_inicial);
+  }
+
+}
+
 task main() {
 
   SetSensorLowspeed(US_chao_d);
@@ -906,7 +1012,7 @@ task main() {
         Wait(200);
       }else{
         // sobe_rampa();
-        // Plaza();
+        Plaza();
         // desce_rampa();
       }
 
