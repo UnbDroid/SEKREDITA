@@ -8,7 +8,7 @@
 #define PORTA_D OUT_C
 #define RAMPA OUT_B
 #define PORTAS OUT_AC
-#define distancia_lateral 30
+#define distancia_lateral 20
 #define distancia_frontal 30
 #define esquerda 1
 #define frente 2
