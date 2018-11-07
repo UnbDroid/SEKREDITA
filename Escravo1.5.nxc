@@ -8,7 +8,7 @@
 #define PORTA_D OUT_C
 #define RAMPA OUT_B
 #define PORTAS OUT_AC
-#define distancia_lateral 20
+#define distancia_lateral 30
 #define distancia_frontal 30
 #define esquerda 1
 #define frente 2
@@ -77,60 +77,72 @@ task main(){
     float media_e = 255,media_d = 255, media_frontal = 255, leitura_e, leitura_d,leitura_frontal;
     BTCheck(0);
 
-    while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre ativar o escravo
-
-
-    do {
-        // Pega as leituras
-        leitura_e = retorna_leitura_mediana(esquerda);
-        leitura_d = retorna_leitura_mediana(direita);
-
-        // Calcula a média dos valores lidos
-        media_e = alfa*leitura_e + (1-alfa)*media_e;
-        media_d = alfa*leitura_d + (1-alfa)*media_d;
-
-    }while(media_e > distancia_lateral && media_d > distancia_lateral);// PROCURA BONECO LATERAL
-
-
-    if(media_d < distancia_lateral){ // Achou boneco na direita
-        SendResponseNumber(OUT_MBOX, direita);
-    }else if (media_e < distancia_lateral) {// Achou boneco na esquerda
-        SendResponseNumber(OUT_MBOX, esquerda);
-    }
-
-    while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Recebe avisando que o mestre recebeu a mensagem
-
-    while(MotorRotationCount(PORTA_D) < 80 && MotorRotationCount(PORTA_E) < 80){
-        OnFwd(PORTAS, 50);
-    }
-    Off(PORTAS);
-
-    OnRev(RAMPA, 20);
+    OnFwd(RAMPA, 20);
     Wait(200);
 
     Off(RAMPA);
+    ResetRotationCount(RAMPA);
+    Wait(100);
 
-    SendResponseNumber(OUT_MBOX, 1); // Fala pro mestre que abriu as portas
+    while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre ativar o escravo
 
-    do{
+    while(1){
 
-        leitura_frontal = retorna_leitura_mediana(frente);
-        media_frontal = alfa*leitura_frontal + (1-alfa)*media_frontal;
+        do {
+            // Pega as leituras
+            leitura_e = retorna_leitura_mediana(esquerda);
+            leitura_d = retorna_leitura_mediana(direita);
 
-        ClearScreen();
-        NumOut(2,LCD_LINE1,media_frontal);
-        NumOut(2,LCD_LINE2,leitura_frontal);
-    }while(media_frontal > distancia_frontal);
+            // Calcula a média dos valores lidos
+            media_e = alfa*leitura_e + (1-alfa)*media_e;
+            media_d = alfa*leitura_d + (1-alfa)*media_d;
 
-    SendResponseNumber(OUT_MBOX, media_frontal); // Avisa pro mestre que achou algo no sensor do frente enquanto o robo ta girando
-    
-    while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre falar que parou
+        }while(media_e > distancia_lateral && media_d > distancia_lateral);// PROCURA BONECO LATERAL
 
-    OnRev(PORTAS, 60);
-    Wait(700);
-    OnFwd(RAMPA,60);
-    Wait(300);
-    Off(PORTAS);
 
-    SendResponseNumber(OUT_MBOX, 1); // Avisa o mestre que o boneco foi capturado
+        if(media_d < distancia_lateral){ // Achou boneco na direita
+            SendResponseNumber(OUT_MBOX, direita);
+        }else if (media_e < distancia_lateral) {// Achou boneco na esquerda
+            SendResponseNumber(OUT_MBOX, esquerda);
+        }
+
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Recebe avisando que o mestre recebeu a mensagem
+
+        while(MotorRotationCount(PORTA_D) < 80 && MotorRotationCount(PORTA_E) < 80){
+            OnFwd(PORTAS, 50);
+        }
+        Off(PORTAS);
+
+        OnRev(RAMPA, 20);
+        Wait(200);
+
+        Off(RAMPA);
+
+        SendResponseNumber(OUT_MBOX, 1); // Fala pro mestre que abriu as portas
+
+        do{
+
+            leitura_frontal = retorna_leitura_mediana(frente);
+            media_frontal = alfa*leitura_frontal + (1-alfa)*media_frontal;
+
+            ClearScreen();
+            NumOut(2,LCD_LINE1,media_frontal);
+            NumOut(2,LCD_LINE2,leitura_frontal);
+        }while(media_frontal > distancia_frontal);
+
+        SendResponseNumber(OUT_MBOX, media_frontal); // Avisa pro mestre que achou algo no sensor do frente enquanto o robo ta girando
+        
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre falar que parou
+
+        OnRev(PORTAS, 60);
+        Wait(700);
+        OnFwd(RAMPA,60);
+        Wait(300);
+        Off(PORTAS);
+
+        SendResponseNumber(OUT_MBOX, 1); // Avisa o mestre que o boneco foi capturado
+
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX);
+    }
 }
+
