@@ -1,0 +1,174 @@
+#define BT_CONN 1
+#define OUT_MBOX 1
+#define IN_MBOX 5
+#define Ultra_Boneco_Esquerda IN_1
+#define Ultra_Boneco_Direita IN_2
+#define Ultra_Boneco_Frente IN_3
+#define PORTA_E OUT_A
+#define PORTA_D OUT_C
+#define RAMPA OUT_B
+#define PORTAS OUT_AC
+#define distancia_lateral 30
+#define distancia_frontal 30
+#define esquerda 1
+#define frente 2
+#define direita 3
+#define PRETO    1
+#define AZUL     2
+#define VERDE    3
+#define AMARELO  4
+#define VERMELHO 5
+#define BRANCO   6
+#define FORA     7
+#define alfa 0.6
+
+sub BTCheck(int conn){
+  if(!BluetoothStatus(conn)==NO_ERR){
+    ClearScreen();
+    TextOut(5,LCD_LINE2,"Erro");
+    Wait(1000);
+    Stop(true);
+   }
+}
+
+int retorna_leitura_mediana(int lado){
+
+    float leitura[3], max = 0;
+    int i,j,indice;
+
+    // Pega as 5 leituras
+    for(i=0;i<=2;i++){
+        if(lado == esquerda){
+            leitura[i] = SensorUS(Ultra_Boneco_Esquerda);
+        }else if(lado == direita){
+            leitura[i] = SensorUS(Ultra_Boneco_Direita);
+        }else if(lado == frente){
+            leitura[i] = SensorUS(Ultra_Boneco_Frente);
+        }
+    }
+
+    // Ordenação do vetor de leituras
+    for(i=0;i<=2;i++){
+        for(j=0;j<=2-i;j++){
+            if(leitura[j] > max){
+                indice = j;
+                max = leitura[j];
+            }
+        }
+        if(indice != 2-i){
+            max = leitura[indice];
+            leitura[indice] = leitura[2-i];
+            leitura[2-i] = max;
+        }
+        max = 0;
+    }
+
+    return leitura[1];
+}
+
+task main(){
+
+    SetSensorLowspeed(Ultra_Boneco_Direita);
+    SetSensorLowspeed(Ultra_Boneco_Frente);
+    SetSensorLowspeed(Ultra_Boneco_Esquerda);
+    float leitura_lateral, media_lateral;
+
+    float distancia_boneco[3];
+    int i=0;
+    float media_e = 255,media_d = 255, media_frontal = 255, leitura_e, leitura_d,leitura_frontal;
+    BTCheck(0);
+
+
+    while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre ativar o escravo
+
+    while(1){
+
+        do {
+            // Pega as leituras
+            leitura_e = retorna_leitura_mediana(esquerda);
+            leitura_d = retorna_leitura_mediana(direita);
+
+            // Calcula a média dos valores lidos
+            media_e = alfa*leitura_e + (1-alfa)*media_e;
+            media_d = alfa*leitura_d + (1-alfa)*media_d;
+
+        }while(media_e > distancia_lateral && media_d > distancia_lateral);// PROCURA BONECO LATERAL
+
+
+        if(media_d < distancia_lateral){ // Achou boneco na direita
+            SendResponseNumber(OUT_MBOX, direita);
+        }else if (media_e < distancia_lateral) {// Achou boneco na esquerda
+            SendResponseNumber(OUT_MBOX, esquerda);
+        }
+
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Recebe avisando que o mestre recebeu a mensagem
+
+        while(MotorRotationCount(PORTA_D) < 80 && MotorRotationCount(PORTA_E) < 80){
+            OnFwd(PORTAS, 50);
+        }
+        Off(PORTAS);
+
+
+        SendResponseNumber(OUT_MBOX, 1); // Fala pro mestre que abriu as portas
+
+        do{
+
+            leitura_frontal = retorna_leitura_mediana(frente);
+            media_frontal = alfa*leitura_frontal + (1-alfa)*media_frontal;
+
+            ClearScreen();
+            NumOut(2,LCD_LINE1,media_frontal);
+            NumOut(2,LCD_LINE2,leitura_frontal);
+        }while(media_frontal > distancia_frontal);
+
+        SendResponseNumber(OUT_MBOX, media_frontal); // Avisa pro mestre que achou algo no sensor do frente enquanto o robo ta girando
+        
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre falar que parou
+
+        OnRev(PORTAS, 50);
+        Wait(1000);
+        Off(PORTAS);
+        ResetRotationCount(PORTAS);
+        Wait(100);
+
+        SendResponseNumber(OUT_MBOX, 1); // Avisa o mestre que o boneco foi capturado
+
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre avisar que cheogu no preto
+
+        OnFwd(PORTAS, 50);
+        Wait(1000);
+
+        Off(PORTAS);
+        ResetRotationCount(PORTAS);
+        Wait(200);
+
+        SendResponseNumber(OUT_MBOX, 1); // Fala que abriu as portas
+
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera pedir pra fechar a porta 
+
+        OnRev(PORTAS, 50);
+        Wait(1000);
+        Off(PORTAS);
+        ResetRotationCount(PORTAS);
+        Wait(200);
+
+        SendResponseNumber(OUT_MBOX, 1);// Fechou as portas
+
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Espera o mestre pedir pra ler o ultrassom lateral
+
+        do{ // Verifica se ta vendo parede
+
+            leitura_lateral = retorna_leitura_mediana(esquerda);
+            media_lateral = alfa*leitura_lateral + (1-alfa)*media_lateral;
+
+            ClearScreen();
+            NumOut(2,LCD_LINE1,media_lateral);
+            NumOut(2,LCD_LINE2,leitura_lateral);
+        }while(media_lateral < 30);
+
+        SendResponseNumber(OUT_MBOX, 1); // Avisa pro mestre que pode girar
+
+        while(ReceiveRemoteNumber(IN_MBOX,true,i) == STAT_MSG_EMPTY_MAILBOX); // Passou a rampa, volta para o inicio do codigo
+
+    }
+}
