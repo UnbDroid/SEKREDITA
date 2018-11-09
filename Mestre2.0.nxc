@@ -1,0 +1,1353 @@
+#define motor_e OUT_C        // Motor esquerdo
+#define motor_d OUT_A        // Motor direito
+#define motor_ambos OUT_AC
+#define potencia_inicial 55 // PotÃªncia de referÃªncia, usar OnRev para ir para frente
+#define US_chao_d IN_1      // SensorUS voltado para o chÃ£o direito
+#define US_chao_e IN_2      // SensorUS voltado para o chÃ£o esquerdo
+#define HT_direita IN_3   // Sensor de cor da direita
+#define HT_esquerda IN_4  // Sensor de cor da esquerda
+#define kp 0.2
+#define ki 0.08
+#define kd 0.1
+#define PRETO    1
+#define AZUL     2
+#define VERDE    3
+#define AMARELO  4
+#define VERMELHO 5
+#define BRANCO   6
+#define FORA     6
+#define esquerda 1
+#define frente 2
+#define direita 3
+#define distancia_do_chao 10.3
+#define distancia_da_rampa 7.5
+#define FILE_NAME "arq.dat"
+#define FILE_SIZE 11
+#define BT_CONN 1
+#define OUT_MBOX 5
+#define IN_MBOX 1
+
+float leitura_US_e[4] ={7.5,7.5,7.5,7.5}, leitura_US_d[4] ={7.5,7.5,7.5,7.5};
+// VariÃ¡veis do filtro de US
+int contador = 0;
+float media_US_d =7.5,media_US_e=7.5;
+int inter = 0;
+
+byte color_1, verm_1, verd_1, azul_1, branco_1, num_1, color_2, verm_2, verd_2, azul_2, branco_2, num_2;
+int tentativa = 0, ultima_direcao = 0, ultimo_lado = PRETO, cor_1=0, cor_2=0, cor_3=0;
+char direcao[9];
+byte handle = 0;
+string entrada, saida; //Interface vetor de char e string no arquivo
+
+//          Esq  Fre  Dir
+//Vermelho  [0]  [1]  [2]
+//   Verde  [3]  [4]  [5]
+//    Azul  [6]  [7]  [8]
+
+void gira90(int lado);
+void gira180();
+int le_cor(int lado);
+void Nao_Cai(int lado);
+void le_arq();
+void reescreve();
+void inverte_cor();
+
+// Testa a conectividade bluetooth
+sub BTCheck(int conn){
+  if (!BluetoothStatus(conn)==NO_ERR){
+    ClearScreen();
+    TextOut(5,LCD_LINE2,"Erro");
+    Wait(1000);
+    Stop(true);
+   }
+}
+
+// Essa função faz potenciação
+float pot(float a, int b) { // PotenciaÃ§Ã£o
+  int i;
+  float r=1;
+
+  for(i=0; i<b; i++) {
+    r *= a;
+  }
+
+  return r;
+}
+
+// Essa função escreve '1' na ultima direção testada do robo e escreve zero nas outras duas, assim como na mesma coluna do 1
+void grava_certo(){
+  int contador, validade = 1;
+
+
+  if(ultimo_lado == VERMELHO){
+    contador = 0;
+    while(contador < 3){
+      if(direcao[contador] == '1'){
+        validade = 0;
+      }
+      contador++;
+    }
+  }else if(ultimo_lado == VERDE){
+    contador = 3;
+    while(contador < 6){
+      if(direcao[contador] == '1'){
+        validade = 0;
+      }
+      contador++;
+    }
+  }else if(ultimo_lado == AZUL){
+    contador = 6;
+    while(contador < 9){
+      if(direcao[contador] == '1'){
+        validade = 0;
+      }
+      contador++;
+    }
+  }
+
+
+  if(validade == 1){
+    if(ultimo_lado == VERMELHO){
+      contador = 0;
+      while(direcao[contador] == '0'){
+        contador++;
+      }
+      direcao[0] = '0';
+      direcao[1] = '0';
+      direcao[2] = '0';
+      direcao[contador] = '1';
+    }else if(ultimo_lado == VERDE){
+      contador = 3;
+      while(direcao[contador] == '0'){
+        contador++;
+      }
+      direcao[3] = '0';
+      direcao[4] = '0';
+      direcao[5] = '0';
+      direcao[contador] = '1';
+    }else if(ultimo_lado == AZUL){
+      contador = 6;
+      while(direcao[contador] == '0'){
+        contador++;
+      }
+      direcao[6] = '0';
+      direcao[7] = '0';
+      direcao[8] = '0';
+      direcao[contador] = '1';
+    }
+   reescreve();
+  }
+}
+
+// Essa função corrige erros grandes ao entrar em uma nova cor
+void entra_na_cor(){
+
+  Off(motor_ambos);
+
+  if(le_cor(esquerda) != BRANCO) {
+    while(le_cor(direita) == BRANCO && le_cor(esquerda) != BRANCO){
+      OnRev(motor_d, potencia_inicial);
+    }
+  }else if(le_cor(direita) != BRANCO){
+    while(le_cor(esquerda) == BRANCO && le_cor(direita) != BRANCO){
+      OnRev(motor_e, potencia_inicial);
+    }
+  }
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+}
+
+// Essa função apaga o arquivo e escreve todos os elementos do vetor de direçao em um novo arquivo
+void reescreve () {
+   unsigned int esc;
+   unsigned int rtn_code = DeleteFile(FILE_NAME);
+   int i;
+
+   entrada = ByteArrayToStr(direcao);
+
+   ClearScreen();
+   if(rtn_code == LDR_SUCCESS)   TextOut(0, LCD_LINE2, "Deletou!");
+   else if (rtn_code == LDR_FILENOTFOUND) TextOut(0, LCD_LINE1, "Ja apagado!");
+   else TextOut(0, LCD_LINE1, "Erro!");
+
+
+   rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+   ClearScreen();
+      switch (rtn_code) {
+      case LDR_SUCCESS:
+            esc = Write(handle, entrada);
+            if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+            else {
+               NumOut(0, LCD_LINE4, esc);
+               TextOut(0, LCD_LINE5, "Não escreveu!");
+            }
+         break;
+      case LDR_FILEISBUSY:
+         TextOut(0, LCD_LINE2, "File is Busy");
+         break;
+      case LDR_FILENOTFOUND:
+         TextOut(0, LCD_LINE2, "File not found");
+         break;
+      case LDR_FILEEXISTS:
+         TextOut(0, LCD_LINE2, "File exists");
+         break;
+      case LDR_FILEISFULL:
+         TextOut(0, LCD_LINE2, "File is full");
+         break;
+
+      default:
+         NumOut (0, LCD_LINE2, rtn_code);
+         TextOut(0, LCD_LINE4, "Erro!");
+         break;
+   }
+
+   CloseFile(handle);
+}
+
+void le_US(){
+
+  int i;
+  
+  leitura_US_d[contador%4] = SensorUS(US_chao_d);
+  leitura_US_e[contador%4] = SensorUS(US_chao_e);
+  contador++;
+
+    for(i = 0;i < 3;i++){
+      media_US_e += leitura_US_e[i];
+      media_US_d += leitura_US_d[i];
+    }
+
+  media_US_d = media_US_d/4;
+  media_US_e = media_US_e/4;
+  }
+
+// Essa função sai da cor evitando o robo de cair
+void sai_da_cor(){
+
+  Off(motor_ambos);
+  Wait(200);
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  int i, correcao;
+
+  while(le_cor(direita) != BRANCO || le_cor(esquerda) != BRANCO){
+    
+    le_US();
+
+    if(media_US_e > distancia_do_chao){
+      Off(motor_ambos);
+      Nao_Cai(esquerda);
+    }else if(media_US_d > distancia_do_chao){
+      Off(motor_ambos);
+      Nao_Cai(direita);
+    }
+
+
+    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnRev(motor_e, potencia_inicial - correcao);
+    OnRev(motor_d, potencia_inicial + correcao);
+
+  }
+
+  Off(motor_ambos);
+  Wait(200);
+
+  if(le_cor(esquerda) != BRANCO){
+    while(le_cor(esquerda) != BRANCO){
+      OnRev(motor_e, potencia_inicial);
+    }
+  }else if(le_cor(direita) != BRANCO){
+    while(le_cor(direita) != BRANCO){
+      OnRev(motor_d, potencia_inicial);
+    }
+  }
+
+  Off(motor_ambos);
+  Wait(200);
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+}
+
+// Essa função grava a última tentativa do robo como 0 na matriz, que representa q ele errou
+void grava_preto(){
+  int contador, validade = 1;
+
+  ultima_direcao = 1;
+
+  if(ultimo_lado == VERMELHO){
+    contador = 0;
+    while(contador < 3){
+      if(direcao[contador] == '1'){
+        validade = 0;
+      }
+      contador++;
+    }
+  }else if(ultimo_lado == VERDE){
+    contador = 3;
+    while(contador < 6){
+      if(direcao[contador] == '1'){
+        validade = 0;
+      }
+      contador++;
+    }
+  }else if(ultimo_lado == AZUL){
+    contador = 6;
+    while(contador < 9){
+      if(direcao[contador] == '1'){
+        validade = 0;
+      }
+      contador++;
+    }
+  }
+
+  if(validade == 1){
+    if(ultimo_lado == VERMELHO){
+      contador = 0;
+      while(direcao[contador] == '0'){
+        contador++;
+        ultima_direcao++;
+      }
+      direcao[contador] = '0';
+    }else if(ultimo_lado == VERDE){
+      contador = 3;
+      while(direcao[contador] == '0'){
+        contador++;
+        ultima_direcao++;
+      }
+      direcao[contador] = '0';
+    }else if(ultimo_lado == AZUL){
+      contador = 6;
+      while(direcao[contador] == '0'){
+        contador++;
+        ultima_direcao++;
+      }
+      direcao[contador] = '0';
+    }
+   reescreve();
+  }
+}
+
+// Essa função decide pra qual lado girar apos estar centralizado numa cor
+void teste_cor(int cor){
+  int lado = 1;
+  int contador;
+  switch (cor){
+    case VERMELHO:
+      if(ultimo_lado != PRETO){
+        inter++;
+        grava_certo();
+      }
+      ultimo_lado = VERMELHO;
+      contador = 0;
+      if(tentativa == 0){
+        while(direcao[contador] == '0'){
+           contador++;
+           lado++;
+        }
+        gira90(lado);
+      }else{
+        if(tentativa == 1){
+          tentativa = 0;
+          if(ultima_direcao == frente){
+            gira90(esquerda);
+          }else if(direcao[1] != '0'){
+            gira90(esquerda);
+          }
+        }
+      }
+      break;
+    case VERDE:
+      if(ultimo_lado != PRETO){
+        inter++;
+        grava_certo();
+      }
+      ultimo_lado = VERDE;
+      contador = 3;
+      if(tentativa == 0){
+        while(direcao[contador] == '0'){
+           contador++;
+           lado++;
+        }
+        gira90(lado);
+      }else{
+        if(tentativa == 1){
+          tentativa = 0;
+          if(ultima_direcao == frente){
+            gira90(esquerda);
+          }else if(direcao[4] != '0'){
+            gira90(esquerda);
+          }
+        }
+      }
+    break;
+    case AZUL:
+      if(ultimo_lado != PRETO){
+        inter++;
+        grava_certo();
+      }
+      ultimo_lado = AZUL;
+      contador = 6;
+      if(tentativa == 0){
+        while(direcao[contador] == '0'){
+           contador++;
+           lado++;
+        }
+        gira90(lado);
+      }else{
+        if(tentativa == 1){
+          tentativa = 0;
+          if(ultima_direcao == frente){
+            gira90(esquerda);
+          }else if(direcao[7] != '0'){
+            gira90(esquerda);
+          }
+        }
+      }
+    break;
+  }
+}
+
+// Essa função gira 90° com argumento do lado
+void gira90(int lado){
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+  int correcao;
+
+  if(lado == esquerda){
+    while((MotorRotationCount(motor_d)) > -205){
+      correcao = 0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+      OnFwd(motor_e, potencia_inicial - correcao);
+      OnRev(motor_d, potencia_inicial + correcao);
+    }
+  }else if(lado == direita){
+    while((MotorRotationCount(motor_d)) < 245){
+      correcao =0.1*kp*(abs(MotorRotationCount(motor_d)) - abs(MotorRotationCount(motor_e)));
+      OnRev(motor_e, potencia_inicial - correcao);
+      OnFwd(motor_d, potencia_inicial + correcao);
+    }
+  }
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+}
+
+
+
+// Essa função gira 180°
+void gira180(){
+
+  int offset,erro;
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+
+  /*int correcao;
+
+  while(MotorRotationCount(motor_d) > -420){
+    OnFwd(motor_e, potencia_inicial);
+    OnRev(motor_d, potencia_inicial);
+  }*/
+  gira90(esquerda);
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+  /*gira90(esquerda);
+
+  Off(motor_ambos);
+  */
+
+
+  while(media_US_e < distancia_do_chao && media_US_d < distancia_do_chao){
+    
+    erro = 0.1*kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnRev(motor_e, 45 - erro);
+    OnRev(motor_d, 45 + erro);
+    le_US();
+  }
+
+  Off(motor_ambos);
+
+  if(media_US_d < distancia_do_chao && media_US_e > distancia_do_chao){
+    offset = MotorRotationCount(motor_e);
+    le_US();
+    while(media_US_e > distancia_do_chao){
+      OnFwd(motor_e,45);
+      le_US();
+    }
+    Off(motor_ambos);
+    ResetRotationCount(motor_ambos);
+    Wait(100);
+    while(MotorRotationCount(motor_e) < 45){
+      OnFwd(motor_ambos,45);
+    }
+  }else if(media_US_e < distancia_do_chao && media_US_d > distancia_do_chao){
+    offset = MotorRotationCount(motor_d);
+    le_US();
+    while(media_US_d > distancia_do_chao){
+      OnFwd(motor_d,45);
+      le_US();
+    }
+    Off(motor_ambos);
+    ResetRotationCount(motor_ambos);
+    Wait(100);
+
+    while(MotorRotationCount(motor_d) < 45){
+      OnFwd(motor_ambos,45);
+    }
+  }else {
+    Off(motor_ambos);
+    ResetRotationCount(motor_ambos);
+    Wait(100);
+    while(MotorRotationCount(motor_e) < 45){
+      OnFwd(motor_ambos,45);
+    }    
+  }
+
+  Off(motor_ambos);
+  gira90(esquerda);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+}
+
+// Essa função recebe uma quantidade de graus que se converterá em ré
+void re(int graus){
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+  int correcao;
+  while(MotorRotationCount(motor_d) < graus){
+    correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+    OnFwd(motor_e, potencia_inicial + correcao);
+    OnFwd(motor_d, potencia_inicial - correcao);
+  }
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+}
+
+// Essa função relaciona os valores obtidos do HT à uma cor
+int le_cor (int lado) {
+
+  float sum, m, var; //m Ã© a mÃ©dia aritmÃ©tica, var Ã© a variÃ¢ncia e sum Ã© a soma
+  float verm, verd, azul;
+  if(lado == direita){
+
+  ReadSensorHTColor2Active(HT_direita, num_1, verm_1, verd_1, azul_1, branco_1);
+  }
+  else if (lado == esquerda) {
+    ReadSensorHTColor2Active(HT_esquerda, num_1, verm_1, verd_1, azul_1, branco_1);
+  }
+  sum = verm_1 + azul_1 + verd_1;
+  m = sum/3;
+  verm = verm_1;
+  verd = verd_1;
+  azul = azul_1;
+  var = ( pot(verm - m , 2) + pot(verd - m , 2) + pot(azul - m , 2) )/3;
+
+  if( var >= pot(255-m , 2)) {
+    if (var<9) return BRANCO;
+  }
+
+  if(verm > azul && verd > azul && azul < m && pot(verm - m , 2) < var && verm > m && verd > m && pot (verd - m , 2) < var && var > 9) return AMARELO;
+  if( pot(verm - m , 2) > var && verm > m && var > 9 ) return VERMELHO;
+  if( pot(verd - m , 2) > var && verd > m && var > 9) return VERDE;
+  if( pot ( azul - m , 2) > var && azul > m && var > 9) return AZUL;
+  if( m <= 50 && var <= 5) return PRETO;
+
+  return BRANCO;
+}
+
+// Essa função impede o robo de cair para os lados
+void Nao_Cai(int lado){
+
+  Off(motor_ambos);
+  Wait(300);
+  int i;
+
+  // Enquanto estÃ¡ caindo
+  if(lado == direita){
+    OnFwd(motor_e, potencia_inicial);
+    while(media_US_d > distancia_do_chao){  
+      leitura_US_d[contador%4] = SensorUS(US_chao_d);
+      contador++;
+      for(i = 0;i < 3;i++){
+        media_US_d += leitura_US_d[i];
+      }
+      media_US_d = media_US_d/4;
+    }
+  }else if(lado == esquerda){
+    OnFwd(motor_d, potencia_inicial);
+    while(media_US_e > distancia_do_chao){  
+      leitura_US_e[contador%4] = SensorUS(US_chao_e);
+      contador++;
+      for(i = 0;i < 3;i++){
+        media_US_e += leitura_US_e[i];
+      }
+      media_US_e = media_US_e/4;
+    }// Para voltar para a pista Ã© preciso girar a roda esquerda para frente e a direita para trÃ¡s
+  } /*while(MotorRotationCount(motor_d) < 40){
+      OnFwd(motor_e, potencia_inicial);
+      OnFwd(motor_d, potencia_inicial);
+     }*/
+  Off(motor_ambos);
+  Wait(500);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+}
+
+// Essa função anda o suficiente para o robô se centralizar numa cor
+int centraliza(int cor){
+  
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+  int correcao, cor_nova;
+
+  if(1) {
+    while(MotorRotationCount(motor_d)>-40){
+      correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+      OnRev(motor_e, potencia_inicial - correcao);
+      OnRev(motor_d, potencia_inicial + correcao);
+
+    }
+    Off(motor_ambos);
+    Wait(200);
+
+    cor_nova  = le_cor(esquerda);
+
+      if(cor_nova == cor || cor_nova == BRANCO || cor_nova == PRETO) {
+
+      while(MotorRotationCount(motor_d)>-145){
+          correcao =kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+          OnRev(motor_e, potencia_inicial - correcao);
+          OnRev(motor_d, potencia_inicial + correcao);
+        }
+
+      Off(motor_ambos);
+    }else {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+// Essa função verifica o que fazer logo apos achar uma cor
+int checa_cor(int ht_e){
+
+  switch (ht_e){
+
+    case PRETO:
+      Off(motor_ambos);
+      Wait(600);
+      tentativa++;
+      grava_preto();
+      ultimo_lado = PRETO;
+      gira180();
+      sai_da_cor();
+      break;
+    case VERMELHO:
+      if(centraliza(ht_e)){
+        return TRUE;
+      }
+      Off(motor_ambos);
+      Wait(600);
+      teste_cor(VERMELHO);
+      sai_da_cor();
+      if(inter == 5){ //Rosana colocou inter == 1, era inter == 5
+        Off(motor_ambos);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+        while(MotorRotationCount(motor_d) > - 90){
+                  
+          OnRev(motor_ambos, potencia_inicial);
+        }
+        Off(motor_ambos);
+        Wait(500);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+
+        gira180();
+        inverte_cor();
+        SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
+        inter = 100;
+      }
+      break;
+    case VERDE:
+      if(centraliza(ht_e)){
+        return TRUE;
+      }
+      Off(motor_ambos);
+      Wait(600);
+      teste_cor(VERDE);
+      sai_da_cor();
+      if(inter == 5){
+        Off(motor_ambos);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+        while(MotorRotationCount(motor_d) > - 90){
+          OnRev(motor_ambos, potencia_inicial);
+        }
+        Off(motor_ambos);
+        Wait(500);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+
+        gira180();
+        inverte_cor();
+        SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
+        inter = 100;
+      }
+      break;
+    case AZUL:
+      if(centraliza(ht_e)){
+        return TRUE;
+      }
+      Off(motor_ambos);
+      Wait(600);
+      teste_cor(AZUL);
+      sai_da_cor();
+      if(inter == 5){
+        Off(motor_ambos);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+        while(MotorRotationCount(motor_d) > - 90){
+          OnRev(motor_ambos, potencia_inicial);
+        }
+        Off(motor_ambos);
+        Wait(500);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+
+        gira180();
+        inverte_cor();
+        SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa para o escravo que pode começar a pegar boneco
+        inter = 100;
+      }
+      break;
+
+
+  }
+  return FALSE;
+}
+
+// Essa função inverte a direção das cores após ele voltar da rampa
+void inverte_cor(){
+  char aux;
+
+  aux = direcao[0];
+  direcao[0] = direcao[2];
+  direcao[2] = aux;
+  aux = direcao[3];
+  direcao[3] = direcao[5];
+  direcao[5] = aux;
+  aux = direcao[6];
+  direcao[6] = direcao[8];
+  direcao[8] = aux;
+}
+
+// Essa função anda pra frente ate se aproximar do boneco e pega-lo
+void pega_boneco(float distancia){
+  int i;
+  float correcao = 0;
+ 
+    
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+    while(MotorRotationCount(motor_e) > -(distancia*11)){ // Enquanto o escravo não ve nada, anda pra frente
+    
+      correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+      OnRev(motor_e, potencia_inicial - correcao);
+      OnRev(motor_d, potencia_inicial + correcao);
+    } // Se receber mensagem do escravo, muda a condição e sai do loop
+  
+  Off(motor_ambos);
+  SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa pro escravo que o mestre parou
+
+  while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Espera o escravo avisar que pegou o boneco
+
+  re(distancia*8);
+}
+
+// Essa função gira ate achar o boneco com o sensor frontal
+int gira_boneco(int lado){
+  int i = 0;
+  float dist = 255;
+
+    while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Espera o escravo abrir as portas
+
+    re(150);
+    Off(motor_ambos);
+    Wait(200);
+   
+
+  if(lado == direita){
+    while(ReceiveRemoteNumber(IN_MBOX,true, dist) != NO_ERR){
+      OnRev(motor_e, potencia_inicial-5);
+      OnRev(motor_d, -potencia_inicial+5);
+    }
+    ResetRotationCount(motor_ambos);
+    Wait(100);
+  }else{
+    while(ReceiveRemoteNumber(IN_MBOX,true, dist) != NO_ERR){
+      OnRev(motor_e, -potencia_inicial+5);
+      OnRev(motor_d, potencia_inicial-5);
+    }
+    ResetRotationCount(motor_ambos);
+    Wait(100);
+  }
+  pega_boneco(dist);
+}
+
+int Andar(){
+  /*
+      Entradas:     A função não tem argumentos.
+      Saídas:       Retorna 1 se tiver achado uma rampa.
+      Comentários:  Essa função implementa o controle de posição angular no plano XZ(paralelo ao chão) de um robô móvel.
+                    Ela utiliza o erro entre a medição dos encoders de cada motor para ajustar a potência mandanda para
+                    cada motor de modo a tentar manter o robô em uma trajetória linear. Ela roda até o robô achar uma
+                    rampa fazendo sepre a checagem de cor e ultrasom do chão.
+  */
+
+  // Constantes do controle
+
+    int i;
+
+    float ht_e, ht_d;
+
+    // VariÃ¡veis utilizadas nos calculos
+    float rotacao_e, rotacao_d, erro, correcao, derivativo, integral = 0, ultimo_erro = 0;
+    float potencia_e, potencia_d;
+
+    while(1){
+
+      // Lê a cor do chão com os HT e checa para ver qual a ação a ser tomada
+      if((le_cor(esquerda) != BRANCO || le_cor(direita) != BRANCO)){
+        Off(motor_ambos);
+        Wait(300);
+        entra_na_cor();
+        Off(motor_ambos);
+        Wait(100);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+        if(checa_cor(le_cor(direita))){
+          return TRUE;
+        }
+      }
+
+      if(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR){  //Recebe avisando que o escravo achou boneco nas laterais
+        SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Avisa que recebeu a mensagem para o escravo
+        PlayTone(400, 400);
+        Off(motor_ambos);
+        ClearScreen();
+        NumOut(0,LCD_LINE1,i);
+        gira_boneco(i);
+        Off(motor_ambos);
+        Wait(200);
+        inverte_cor();
+        gira90(i);
+      }
+
+      // Nos diz o erro entre as rotações das rodas
+      erro = MotorRotationCount(motor_d) - MotorRotationCount(motor_e);
+
+      integral += erro;
+
+      // Limita a ação da soma integral do erro
+      //if(integral > 15){
+        //integral = 15;
+      //}else if(integral < -15){
+        //integral = -15;
+      //}
+
+      // Parte derivativa
+      derivativo = (erro - ultimo_erro);
+      ultimo_erro = erro;
+
+      // Multiplica as constantes do controle PID com seus respectivos tratamentos e soma as contribuições
+      correcao = (kp*erro) + (kd*derivativo) + (ki*integral);
+
+      // Calcula a potência de correção em torno da potência inicial desejada
+      potencia_e = potencia_inicial - correcao;
+      potencia_d = potencia_inicial + correcao;
+
+      // OnRev foi utilizado graças a orientação invertida dos motores do nosso robô.
+      OnRev(motor_e, potencia_e);
+      OnRev(motor_d, potencia_d);
+
+      // Realiza um filtro de média aritimética móvel para a leitura dos Sensores Ultrasom do chão
+      le_US();
+
+      ClearScreen();
+      NumOut(1,LCD_LINE1,media_US_e);
+      NumOut(1,LCD_LINE2,media_US_d);
+
+      // Checa para ver se está caindo da pista
+      if(media_US_e > distancia_do_chao){
+        Nao_Cai(esquerda);
+        ht_e = le_cor(esquerda);
+        ht_d = le_cor(direita);
+        if(ht_d != BRANCO || ht_e != BRANCO){
+          while(ht_d != BRANCO || ht_e != BRANCO){
+            OnRev(motor_ambos, potencia_inicial);
+            ht_e = le_cor(esquerda);
+            ht_d = le_cor(direita);
+          }
+          Off(motor_ambos);
+          ResetRotationCount(motor_ambos);
+        }
+      }else if (media_US_d > distancia_do_chao){
+        Nao_Cai(direita);
+        ht_e = le_cor(esquerda);
+        ht_d = le_cor(direita);
+        if(ht_d != BRANCO || ht_e != BRANCO){
+          while(ht_d != BRANCO || ht_e != BRANCO){
+            OnRev(motor_ambos, potencia_inicial);
+            ht_e = le_cor(esquerda);
+            ht_d = le_cor(direita);
+          }
+          Off(motor_ambos);
+          ResetRotationCount(motor_ambos);
+        }
+      }
+    }
+    // Não deveria entrar aqui nunca
+    return 0;
+}
+
+void le_arq(){
+
+  char r;
+  unsigned int size;
+  unsigned int rtn_code = OpenFileRead(FILE_NAME, size, handle);
+
+  //Linhas de teste
+  ClearLine(LCD_LINE1);
+  NumOut(0, LCD_LINE1, rtn_code);
+  Wait(1500);
+  //Fim linhas de teste
+
+
+   // InÃ­cio da leitura dos valores
+   for (int i = 0; i < 9; i++){
+
+      rtn_code = Read(handle, r);
+
+      switch (rtn_code){
+         case LDR_SUCCESS:
+            direcao[i] = r;
+            break;
+        case LDR_ENDOFFILE:
+          TextOut(0, LCD_LINE1, "ERRO, EOF!");
+          Wait(5000);
+          Stop(1);
+            break;
+        default:
+            TextOut(0, LCD_LINE1, "ERRO!");
+      }
+   }
+
+  saida = ByteArrayToStr(direcao);
+
+    CloseFile(handle);
+
+
+}
+
+void cria_arq() {
+  unsigned int rtn_code = CreateFile(FILE_NAME, FILE_SIZE, handle);
+  unsigned int esc;
+
+  switch (rtn_code) {
+    case LDR_SUCCESS:
+      direcao[0] = '*';
+      direcao[1] = '*';
+      direcao[2] = '*';
+      direcao[3] = '*';
+      direcao[4] = '*';
+      direcao[5] = '*';
+      direcao[6] = '*';
+      direcao[7] = '*';
+      direcao[8] = '*';
+      entrada = ByteArrayToStr(direcao);
+      esc = Write(handle, entrada);
+      if (esc == LDR_SUCCESS) TextOut (0, LCD_LINE4, "Escreveu!");
+      else {
+        NumOut(0, LCD_LINE4, esc);
+        TextOut(0, LCD_LINE5, "NÃ£o escreveu!");
+      }
+      break;
+    case LDR_FILEISBUSY:
+      TextOut(0, LCD_LINE2, "File is Busy");
+      break;
+    case LDR_FILENOTFOUND:
+      TextOut(0, LCD_LINE2, "File not found");
+      break;
+    case LDR_FILEEXISTS:
+    le_arq();
+      TextOut(0, LCD_LINE2, "File exists");
+      break;
+    case LDR_FILEISFULL:
+      TextOut(0, LCD_LINE2, "File is full");
+      break;
+
+    default:
+      NumOut (0, LCD_LINE2, rtn_code);
+      TextOut(0, LCD_LINE4, "Erro!");
+      break;
+  }
+
+  CloseFile(handle);
+
+}
+
+void Plaza(){
+  int i = 1, correcao = 0, cor_e, cor_d, erro =0, trava = 100, cont = 0;
+  int integral = 0;
+
+
+  ResetRotationCount(motor_ambos);
+  Wait(1000);
+
+  cor_e = le_cor(esquerda);
+  cor_d = le_cor(direita);
+  
+  while(cor_e != BRANCO && cor_d != BRANCO){ // Anda pelas listras coloridas ate achar branco
+    correcao = kp*(MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+    OnRev(motor_e, 45 - correcao);
+    OnRev(motor_d, 45 + correcao);
+    cor_e = le_cor(esquerda);
+    cor_d = le_cor(direita);
+
+  }
+
+  ResetRotationCount(motor_ambos);
+  Off(motor_ambos);
+  Wait(100);
+
+
+  while(le_cor(esquerda) != PRETO && le_cor(direita) != PRETO){ // Anda até achar o preto do plaza
+    if(abs((MotorRotationCount(motor_d) - trava)) > 20){
+
+      trava = MotorRotationCount(motor_d);
+      erro = (MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+      integral += erro;
+
+      if(integral >30){
+        integral = 30;
+      }else if(integral<-30){
+        integral = -30;
+      }
+
+      correcao = kp*erro + ki*integral;
+
+      OnRev(motor_e, 45 - correcao);
+      OnRev(motor_d, 45 + correcao);
+      cor_e = le_cor(esquerda);
+      cor_d = le_cor(direita);
+      Wait(300);
+    }else{
+
+      ClearScreen();
+      NumOut(5, LCD_LINE1, SensorUS(US_chao_e));
+      NumOut(5, LCD_LINE1, SensorUS(US_chao_d));
+
+      Wait(1000);
+
+      if(SensorUS(US_chao_e) < SensorUS(US_chao_d)){
+        re(100);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+        while(MotorRotationCount(motor_d) > -10 - (cont*3)){
+          OnRev(motor_d, 30);
+          OnFwd(motor_e, 30);
+        }
+        Off(motor_ambos);
+        Wait(100);
+      }else{
+        re(100);
+        ResetRotationCount(motor_ambos);
+        Wait(100);
+        while(MotorRotationCount(motor_e) > -10 - (cont*3)){
+          OnRev(motor_e, 30);
+          OnFwd(motor_d, 30);
+        }
+        Off(motor_ambos);
+        Wait(100);  
+        
+      }
+
+      trava = 100;
+      cont++;
+      Off(motor_ambos);
+      ResetRotationCount(motor_ambos);
+      Wait(1000);
+    }
+  }
+  cont = 0;
+
+  trava = 100;
+
+  Off(motor_ambos);
+  Wait(500);
+
+  SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Fala que achou o plaza e pede pro escravo abrir as portas
+  
+  while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // Recebe falando que o escravo abriu as portas
+
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  cor_d = le_cor(direita);
+  cor_e = le_cor(esquerda);
+
+  while(cor_d != VERDE && cor_e != VERDE) { //PID?   o abs foi a rosana
+    //OnFwd(motor_ambos, potencia_inicial);
+
+    erro = (MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+    correcao = kp*erro;
+
+    OnFwd(motor_e, 40 + correcao);
+    OnFwd(motor_d, 40 - correcao);
+
+    cor_d = le_cor(direita);
+    cor_e = le_cor(esquerda);
+
+  }
+  SendRemoteNumber(BT_CONN, OUT_MBOX, 1); // Fala pro escravo fechar as portas
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(1000);
+
+  gira180();
+
+  //while(ReceiveRemoteNumber(IN_MBOX,true, i) == NO_ERR);
+
+
+  while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR); // escravo fala que fechou as portas  
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(1000);
+
+//  gira90(esquerda);
+
+  while(MotorRotationCount(motor_d) > -150){
+    OnRev(motor_ambos, potencia_inicial);
+  }
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(200);
+
+  SendRemoteNumber(BT_CONN, OUT_MBOX, 1);
+  /*while(abs(MotorRotationCount(motor_d) - trava) > 50){ //Bate na parede lateral do plaza
+    trava = MotorRotationCount(motor_d);
+    OnFwd(motor_ambos, potencia_inicial);
+    Wait(700);
+  }
+  */
+
+  //Rosana in
+
+  /*OnFwd(motor_e, potencia_inicial);
+  Wait(1000);
+  Off(motor_ambos);
+  Wait(100);
+  OnFwd(motor_d, potencia_inicial);
+  Wait(1000);
+*/
+  //Rosana out
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  /*while(MotorRotationCount(motor_d) > -150){ // vai um pouco pra frente Rosana
+    //OnRev(motor_ambos, potencia_inicial);
+
+      erro = (MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+      integral += erro;
+
+      if(integral >30){
+        integral = 30;
+      }else if(integral<-30){
+        integral = -30;
+      }
+
+      correcao = kp*erro + ki*integral;
+
+      OnRev(motor_e, 40 - correcao);
+      OnRev(motor_d, 40 + correcao);
+  }*/
+
+  /*
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  gira90(direita);
+
+  do { // para na parede frontal do plaza  
+    //Rosana colocou do while
+    trava = MotorRotationCount(motor_d);
+    OnFwd(motor_ambos, potencia_inicial);
+    Wait(700);
+  }while(abs(MotorRotationCount(motor_d) - trava) > 50);
+
+  //Rosana in
+
+  OnFwd(motor_e, potencia_inicial);
+  Wait(1000);
+  Off(motor_ambos);
+  Wait(100);
+  OnFwd(motor_d, potencia_inicial);
+  Wait(1000);
+
+
+  //Rosana out
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  while(MotorRotationCount(motor_d) > -80){ // vai um pouco pra frente Rosana mudou pro PID
+    //OnRev(motor_ambos, potencia_inicial);
+      erro = (MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+      integral += erro;
+
+      if(integral >30){
+        integral = 30;
+      }else if(integral<-30){
+        integral = -30;
+      }
+
+      correcao = kp*erro + ki*integral;
+
+      OnRev(motor_e, 40 - correcao);
+      OnRev(motor_d, 40 + correcao);
+  }
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  gira90(esquerda);
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  while(ReceiveRemoteNumber(IN_MBOX,true, i) != NO_ERR){ //Espera o escravo falar que achou a porta
+    erro = (MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+      integral += erro;
+
+      if(integral >30){
+        integral = 30;
+      }else if(integral<-30){
+        integral = -30;
+      }
+
+      correcao = kp*erro + ki*integral;
+
+      OnRev(motor_e, 40 - correcao);
+      OnRev(motor_d, 40 + correcao);
+  }
+  
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  gira90(esquerda);
+
+  cor_d = le_cor(direita);
+  cor_e = le_cor(esquerda);
+
+  while(cor_d == BRANCO && cor_e == BRANCO){ // PID que tenta sair do plaza full de ré tryhard modafocka vai dar bom
+    erro = (MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+    integral += erro;
+
+    if(integral >30){
+      integral = 30;
+    }else if(integral<-30){
+      integral = -30;
+    }
+
+    correcao = kp*erro + ki*integral;
+
+    OnRev(motor_e, potencia_inicial - correcao);
+    OnRev(motor_d, potencia_inicial + correcao);
+  }
+  
+
+  entra_na_cor();
+
+  Off(motor_ambos);
+  ResetRotationCount(motor_ambos);
+  Wait(100);
+
+  while(MotorRotationCount(motor_d) > -280){
+    erro = (MotorRotationCount(motor_d) - MotorRotationCount(motor_e));
+
+    integral += erro;
+
+    if(integral >30){
+      integral = 30;
+    }else if(integral<-30){
+      integral = -30;
+    }
+
+    correcao = kp*erro + ki*integral;
+
+    OnRev(motor_e, potencia_inicial - correcao);
+    OnRev(motor_d, potencia_inicial + correcao);
+  }
+
+  SendRemoteNumber(BT_CONN, OUT_MBOX, 1);*/
+
+}
+
+task main() {
+
+  SetSensorLowspeed(US_chao_d);
+  SetSensorLowspeed(US_chao_e);
+  SetSensorLowspeed (HT_direita);
+  SetSensorLowspeed (HT_esquerda);
+  SetHTColor2Mode(HT_esquerda, HT_CMD_COLOR2_ACTIVE);
+  SetHTColor2Mode(HT_direita, HT_CMD_COLOR2_ACTIVE);
+  cria_arq();
+  int rampa = 0, contador =0;
+
+  //BTCheck(BT_CONN);
+  
+  while(true){
+    rampa = Andar();
+     if(rampa){
+       ClearScreen();
+       TextOut(0,LCD_LINE1,"RAMPAAAAAAAAAAAAAAAAAAAA");
+       Off(motor_ambos);
+       rampa = FALSE;
+       Wait(1000);
+      
+       Plaza();
+
+     }
+   }
+}
